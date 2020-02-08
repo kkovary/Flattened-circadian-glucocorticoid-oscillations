@@ -81,7 +81,7 @@ wat_vol_plot <-
         geom_vline(xintercept = 0, 
                    color = 'red', 
                    linetype = 'dashed') + 
-        xlim(-8,8) +
+        xlim(-9,9) +
         #scale_color_manual(values = c('#4393c3','#878787','#d6604d')) +
         xlab('log2(fold change)') + 
         ylab('-log10(qValue)') +
