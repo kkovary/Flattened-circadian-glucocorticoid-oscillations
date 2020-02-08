@@ -6,7 +6,7 @@ ui <- navbarPage(
   tabPanel(
     'Introduction',
     shiny::includeHTML(
-      'Flattened-circadian-glucocorticoid-oscillations-cause-obesity-due-to-increased.html'
+      'HTML and Markdown/Flattened-circadian-glucocorticoid-oscillations-cause-obesity-due-to-increased.html'
     )
   ),
   wat_ui,
