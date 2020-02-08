@@ -148,7 +148,6 @@ output$bat_gene_bar_plot <- renderPlot({
       filter(lrt_qval < 0.05) %>% 
       
       ggplot(., aes(x = target_id, y = log2(fc), fill = Description)) +
-      geom_bar(stat = 'identity', aes(alpha = (((lrt_qval < 0.05) + 1) / 2))) +
       geom_hline(yintercept = 0) +
       facet_wrap(~Description, scales = 'free_x') +
       theme_bw() +
@@ -182,7 +181,6 @@ output$bat_transcript_bar_plot <- renderPlot({
     
   } else if(length(input$bat_go_terms_table_rows_selected) > 0){
     ggplot(bat_highlighted_genes(), aes(x = external_transcript_name, y = log2(fc), fill = Description)) +
-      geom_bar(stat = 'identity', aes(alpha = (((lrt_qval < 0.05) + 1) / 2))) +
       geom_hline(yintercept = 0) +
       facet_wrap(~Description, scales = 'free_x') +
       theme_bw() +
