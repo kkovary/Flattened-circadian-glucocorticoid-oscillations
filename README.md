@@ -8,9 +8,9 @@ This web app is designed to explore specific comparative RNA-seq analysis for th
 ---
 
 ### Features
-[ ] Volcano plot for WAT
-[ ] Volcano plot for BAT
-[ ] Color layer of selected GO terms for WAT
-[ ] Color layer of selected GO terms for BAT
-[ ] Color layer of selected KEGG pathway categories for WAT
-[ ] Color layer of selected KEGG pathway categories for BAT
+- [ ] Volcano plot for WAT
+- [ ] Volcano plot for BAT
+- [ ] Color layer of selected GO terms for WAT
+- [ ] Color layer of selected GO terms for BAT
+- [ ] Color layer of selected KEGG pathway categories for WAT
+- [ ] Color layer of selected KEGG pathway categories for BAT
