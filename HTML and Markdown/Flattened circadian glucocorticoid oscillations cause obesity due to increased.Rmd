@@ -466,11 +466,11 @@ joined_bat_gene_results <- dplyr::full_join(
 # saveRDS(joined_bat_results, file = 'data/joined_bat_results.RDS')
 # saveRDS(joined_bat_gene_results, file = 'data/joined_bat_gene_results.RDS')
 
-joined_wat_results <- readRDS('data/joined_wat_results.RDS')
-joined_wat_gene_results <- readRDS('data/joined_wat_gene_results.RDS')
+joined_wat_results <- readRDS('../data/joined_wat_results.RDS')
+joined_wat_gene_results <- readRDS('../data/joined_wat_gene_results.RDS')
 
-joined_bat_results <- readRDS('data/joined_bat_results.RDS')
-joined_bat_gene_results <- readRDS('data/joined_bat_gene_results.RDS')
+joined_bat_results <- readRDS('../data/joined_bat_results.RDS')
+joined_bat_gene_results <- readRDS('../data/joined_bat_gene_results.RDS')
 
 ```
 
