@@ -132,8 +132,7 @@ output$bat_gene_bar_plot <- renderPlot({
       theme_bw() +
       theme(axis.text.x = element_text(angle = 50, hjust = 1),
             panel.spacing = unit(0, "lines"),
-            legend.position="bottom",
-            text = element_text(size=20)) +
+            legend.position="bottom") +
       ggtitle('Selected gene abundances - gene level') +
       xlab('') + ylab('log2 bat fold change cort\n pellet / placebo pellet')
     
@@ -174,8 +173,7 @@ output$bat_transcript_bar_plot <- renderPlot({
       theme_bw() +
       theme(panel.spacing = unit(0, "lines"),
             axis.text.x = element_text(angle = 50, hjust = 1),
-            legend.position="bottom",
-            text = element_text(size = 20)) +
+            legend.position="bottom") +
       ggtitle('Selected gene abundances - transcript level') +
       xlab('') + ylab('log2 bat fold change cort\n pellet / placebo pellet')
     
@@ -187,8 +185,7 @@ output$bat_transcript_bar_plot <- renderPlot({
       theme_bw() +
       theme(panel.spacing = unit(0, "lines"),
             axis.text.x = element_text(angle = 50, hjust = 1),
-            legend.position="bottom",
-            text = element_text(size = 20)) +
+            legend.position="bottom") +
       ggtitle('Selected gene abundances - transcript level') +
       xlab('') + ylab('log2 bat fold change cort\n pellet / placebo pellet')
     
