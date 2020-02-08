@@ -170,13 +170,10 @@ output$wat_transcript_bar_plot <- renderPlot({
   if(length(input$wat_gene_table_rows_selected) > 0){
     ggplot(wat_highlighted_genes(), aes(x = external_transcript_name, y = log2(fc), fill = ext_gene)) +
       geom_bar(stat = 'identity') + 
-      geom_hline(yintercept = 0) +
-      facet_wrap(~ext_gene, 
-                 scales = 'free_x') +
+      geom_hline(yintercept = 0)  +
       theme_bw() +
-      theme(axis.text.x = element_blank(),
-            axis.ticks = element_blank(),
-            panel.spacing = unit(0, "lines"),
+      theme(panel.spacing = unit(0, "lines"),
+            axis.text.x = element_text(angle = 50, hjust = 1),
             legend.position="bottom",
             text = element_text(size = 20)) +
       ggtitle('Selected gene abundances - transcript level') +
@@ -186,12 +183,10 @@ output$wat_transcript_bar_plot <- renderPlot({
     ggplot(wat_highlighted_genes(), aes(x = external_transcript_name, y = log2(fc), fill = Description)) +
       geom_bar(stat = 'identity') + 
       geom_hline(yintercept = 0) +
-      facet_wrap(~ext_gene, 
-                 scales = 'free_x') +
+      facet_wrap(~Description, scales = 'free_x') +
       theme_bw() +
-      theme(axis.text.x = element_blank(),
-            axis.ticks = element_blank(),
-            panel.spacing = unit(0, "lines"),
+      theme(panel.spacing = unit(0, "lines"),
+            axis.text.x = element_text(angle = 50, hjust = 1),
             legend.position="bottom",
             text = element_text(size = 20)) +
       ggtitle('Selected gene abundances - transcript level') +
