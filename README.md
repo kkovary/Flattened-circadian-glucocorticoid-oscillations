@@ -5,6 +5,8 @@ This web app is designed to explore specific comparative RNA-seq analysis for th
 * WAT tissue - cort pellet vs sham pellet
 * BAT tissue - cort pellet vs sham pellet
 
+Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucocorticoid-oscillations/
+
 ---
 
 ### Features
