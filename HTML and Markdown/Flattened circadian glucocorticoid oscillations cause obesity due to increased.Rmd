@@ -270,11 +270,11 @@ joined_wat_results <- dplyr::full_join(
 
 so_wat <- sleuth_fit(so_wat, 
                      formula = full_design, 
-                     gene_mode = TRUE,
+                     #gene_mode = TRUE,
                      fit_name = "full")
 so_wat <- sleuth_fit(so_wat, 
                      formula = ~ s2c_wat$lane, 
-                     gene_mode = TRUE,
+                     #gene_mode = TRUE,
                      fit_name = "reduced")
 
 so_wat <- sleuth_lrt(so_wat, "reduced", "full")
