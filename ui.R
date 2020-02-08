@@ -5,9 +5,12 @@ ui <- navbarPage(
   title = 'In Vivo RNAseq',
   tabPanel(
     'Introduction',
+    
     shiny::includeHTML(
       'HTML and Markdown/Flattened-circadian-glucocorticoid-oscillations-cause-obesity-due-to-increased.html'
     )
+
+    
   ),
   wat_ui,
   bat_ui

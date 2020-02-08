@@ -108,8 +108,8 @@ output$bat_vol_plot <- renderPlot({
       labs(color = "Gene Name")
   } else if(length(input$bat_go_terms_table_rows_selected) > 0){
     bat_vol_plot() +
-      geom_point(alpha = 0.8, 
-                 size = 4, 
+      geom_point(alpha = 1, 
+                 size = 3, 
                  stroke = 0, 
                  data = bat_highlighted_genes(),
                  aes(color = Description)) +
