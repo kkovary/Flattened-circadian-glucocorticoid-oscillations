@@ -268,16 +268,16 @@ joined_wat_results <- dplyr::full_join(
 #############################
 # LRT w/ lane
 
-so_wat <- sleuth_fit(so_wat, 
-                     formula = full_design, 
-                     #gene_mode = TRUE,
-                     fit_name = "full")
-so_wat <- sleuth_fit(so_wat, 
-                     formula = ~ s2c_wat$lane, 
-                     #gene_mode = TRUE,
-                     fit_name = "reduced")
-
-so_wat <- sleuth_lrt(so_wat, "reduced", "full")
+# so_wat <- sleuth_fit(so_wat, 
+#                      formula = full_design, 
+#                      #gene_mode = TRUE,
+#                      fit_name = "full")
+# so_wat <- sleuth_fit(so_wat, 
+#                      formula = ~ s2c_wat$lane, 
+#                      #gene_mode = TRUE,
+#                      fit_name = "reduced")
+# 
+# so_wat <- sleuth_lrt(so_wat, "reduced", "full")
 lrt_results <- sleuth_results(so_wat, 
                               'reduced:full', 
                               test_type = 'lrt', 
@@ -298,10 +298,13 @@ wt_results <- sleuth_results(so_wat,
 
 # Fold change / adjusted pval
 so_wat_ttest <- kallisto_table(so_wat) %>% 
-  dplyr::mutate(target_id = so_wat$target_mapping[match(target_id,so_wat$target_mapping$target_id),'ext_gene']) %>%
+  dplyr::mutate(transcript = target_id,
+                target_id = so_wat$target_mapping[match(target_id,so_wat$target_mapping$target_id),'ext_gene']) %>%
+  dplyr::group_by(transcript, target_id) %>%
+  summarise(fc = mean((est_counts[treatment == 'Cort_pellet'] + 0.5), na.rm = T) / 
+              mean((est_counts[treatment == 'Placebo_pellet'] + 0.5), na.rm = T)) %>%
   dplyr::group_by(target_id) %>%
-  dplyr::summarise(fc = mean(est_counts[treatment == 'Cort_pellet'], na.rm = T) / 
-              mean(est_counts[treatment == 'Placebo_pellet'], na.rm = T))
+  dplyr::summarise(fc = 2^mean(log2(fc), na.rm = TRUE))
 
 # Join 3 methods
 joined_wat_gene_results <- dplyr::full_join(
@@ -401,16 +404,16 @@ joined_bat_results <- dplyr::full_join(
 #############################
 # LRT w/ lane
 
-so_bat <- sleuth_fit(so_bat, 
-                     formula = full_design, 
-                     gene_mode = TRUE,
-                     fit_name = "full")
-so_bat <- sleuth_fit(so_bat, 
-                     formula = ~ s2c_bat$lane, 
-                     gene_mode = TRUE,
-                     fit_name = "reduced")
-
-so_bat <- sleuth_lrt(so_bat, "reduced", "full")
+# so_bat <- sleuth_fit(so_bat, 
+#                      formula = full_design, 
+#                      gene_mode = TRUE,
+#                      fit_name = "full")
+# so_bat <- sleuth_fit(so_bat, 
+#                      formula = ~ s2c_bat$lane, 
+#                      gene_mode = TRUE,
+#                      fit_name = "reduced")
+# 
+# so_bat <- sleuth_lrt(so_bat, "reduced", "full")
 lrt_results <- sleuth_results(so_bat, 
                               'reduced:full', 
                               test_type = 'lrt', 
@@ -431,17 +434,21 @@ wt_results <- sleuth_results(so_bat,
 
 # Fold change / adjusted pval
 so_bat_ttest <- kallisto_table(so_bat) %>% 
-  dplyr::mutate(target_id = so_bat$target_mapping[match(target_id,so_bat$target_mapping$target_id),'ext_gene']) %>%
+  dplyr::mutate(transcript = target_id,
+                target_id = so_bat$target_mapping[match(target_id,so_bat$target_mapping$target_id),'ext_gene']) %>%
+  dplyr::group_by(transcript, target_id) %>%
+  summarise(fc = mean((est_counts[treatment == 'Cort_pellet'] + 0.5), na.rm = T) / 
+              mean((est_counts[treatment == 'Placebo_pellet'] + 0.5), na.rm = T)) %>%
   dplyr::group_by(target_id) %>%
-  summarise(fc = mean(est_counts[treatment == 'Cort_pellet'], na.rm = T) / 
-              mean(est_counts[treatment == 'Placebo_pellet'], na.rm = T))
+  dplyr::summarise(fc = 2^mean(log2(fc), na.rm = TRUE))
+
 
 # Join 3 methods
 joined_bat_gene_results <- dplyr::full_join(
   dplyr::select(lrt_results,
                 target_id,
                 lrt_qval),
-  dplyr::select(so_wat_ttest,
+  dplyr::select(so_bat_ttest,
                 target_id,
                 fc),
   by = "target_id"
@@ -459,19 +466,22 @@ joined_bat_gene_results <- dplyr::full_join(
                                    'Down',
                                    'Unchanged')))
 
+
+############################
+# Save results data frames #
+############################
+saveRDS(joined_wat_results, file = '../data/joined_wat_results.RDS')
+saveRDS(joined_wat_gene_results, file = '../data/joined_wat_gene_results')
+
+saveRDS(joined_bat_results, file = '../data/joined_bat_results.RDS')
+saveRDS(joined_bat_gene_results, file = '../data/joined_bat_gene_results.RDS')
+
 ```
 
 ```{r}
-###################################
-# Save / load results data frames #
-###################################
-
-# saveRDS(joined_wat_results, file = 'data/joined_wat_results.RDS')
-# saveRDS(joined_wat_gene_results, file = 'data/joined_wat_gene_results')
-# 
-# saveRDS(joined_bat_results, file = 'data/joined_bat_results.RDS')
-# saveRDS(joined_bat_gene_results, file = 'data/joined_bat_gene_results.RDS')
-
+############################
+# Load results data frames #
+############################
 joined_wat_results <- readRDS('../data/joined_wat_results.RDS')
 joined_wat_gene_results <- readRDS('../data/joined_wat_gene_results.RDS')
 
