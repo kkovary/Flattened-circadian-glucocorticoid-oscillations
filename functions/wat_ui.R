@@ -10,14 +10,14 @@ wat_ui <- tabPanel(
         withSpinner(type = 6)
     ),
     tabPanel(
-      'Gene Bar Plot',
-      plotOutput('wat_gene_bar_plot',
+      'Transcript Bar Plot',
+      plotOutput('wat_transcript_bar_plot',
                  height = "600px") %>%
         withSpinner(type = 6)
     ),
     tabPanel(
-      'Transcript Bar Plot',
-      plotOutput('wat_transcript_bar_plot',
+      'Gene Bar Plot',
+      plotOutput('wat_gene_bar_plot',
                  height = "600px") %>%
         withSpinner(type = 6)
     )
