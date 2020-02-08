@@ -127,9 +127,10 @@ output$wat_gene_bar_plot <- renderPlot({
     joined_wat_gene_results %>% filter(target_id %in% wat_highlighted_genes()$ext_gene,
                                        lrt_qval < 0.05) %>%
       ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = target_id)) +
-      geom_bar(stat = 'identity') +
+      geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
       geom_hline(yintercept = 0) +
       theme_bw() +
+      guides(alpha = FALSE) +
       theme(axis.text.x = element_text(angle = 50, hjust = 1),
             panel.spacing = unit(0, "lines"),
             legend.position="bottom") +
@@ -139,6 +140,7 @@ output$wat_gene_bar_plot <- renderPlot({
   } else if(length(input$wat_go_terms_table_rows_selected) > 0){
     
     selected_go_terms <- wat_go_terms[input$wat_go_terms_table_rows_selected,]$ID
+    
     wat_go_terms %>% filter(ID %in% selected_go_terms) %>% 
       mutate(ENTREZID = strsplit(geneID,'/')) %>%
       dplyr::select(ONTOLOGY, ID, Description, ENTREZID) %>%
@@ -147,10 +149,11 @@ output$wat_gene_bar_plot <- renderPlot({
       filter(lrt_qval < 0.05) %>% 
       
       ggplot(., aes(x = target_id, y = log2(fc), fill = Description)) +
-      geom_bar(stat = 'identity') +
+      geom_bar(stat = 'identity', aes(alpha = (((lrt_qval < 0.05) + 1) / 2))) +
       geom_hline(yintercept = 0) +
       facet_wrap(~Description, scales = 'free_x') +
       theme_bw() +
+      guides(alpha = FALSE) +
       theme(axis.text.x = element_text(angle = 50, hjust = 1),
             panel.spacing = unit(0, "lines"),
             legend.position="bottom") +
@@ -167,10 +170,12 @@ output$wat_gene_bar_plot <- renderPlot({
 ##############################
 output$wat_transcript_bar_plot <- renderPlot({
   if(length(input$wat_gene_table_rows_selected) > 0){
+    
     ggplot(wat_highlighted_genes(), aes(x = external_transcript_name, y = log2(fc), fill = ext_gene)) +
-      geom_bar(stat = 'identity') + 
+      geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
       geom_hline(yintercept = 0)  +
       theme_bw() +
+      guides(alpha = FALSE) +
       theme(panel.spacing = unit(0, "lines"),
             axis.text.x = element_text(angle = 50, hjust = 1),
             legend.position="bottom") +
@@ -179,13 +184,14 @@ output$wat_transcript_bar_plot <- renderPlot({
     
   } else if(length(input$wat_go_terms_table_rows_selected) > 0){
     ggplot(wat_highlighted_genes(), aes(x = external_transcript_name, y = log2(fc), fill = Description)) +
-      geom_bar(stat = 'identity') + 
+      geom_bar(stat = 'identity', aes(alpha = (((lrt_qval < 0.05) + 1) / 2))) +
       geom_hline(yintercept = 0) +
       facet_wrap(~Description, scales = 'free_x') +
       theme_bw() +
       theme(panel.spacing = unit(0, "lines"),
             axis.text.x = element_text(angle = 50, hjust = 1),
             legend.position="bottom") +
+      guides(alpha = FALSE) +
       ggtitle('Selected gene abundances - transcript level') +
       xlab('') + ylab('log2 WAT fold change cort\n pellet / placebo pellet')
     
