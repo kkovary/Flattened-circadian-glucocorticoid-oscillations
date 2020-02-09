@@ -6,9 +6,10 @@ author: Tholen S., Kovary K.M., Rabiee A., Bielczyk-Maczyńska E., Yang W., and 
 date: 'Updated: `r format(Sys.time())`'
 output:
   html_document:
-    theme: united
+    theme: yeti
     highlight: tango
     fig_retina: 2
+    code_folding: hide
 ---
 
 \fontsize{6}{8}
