@@ -124,8 +124,7 @@ output$bat_vol_plot <- renderPlot({
 ########################
 output$bat_gene_bar_plot <- renderPlot({
   if(length(input$bat_gene_table_rows_selected) > 0){
-    joined_bat_gene_results %>% filter(target_id %in% bat_highlighted_genes()$ext_gene,
-                                       lrt_qval < 0.05) %>%
+    joined_bat_gene_results %>% filter(target_id %in% bat_highlighted_genes()$ext_gene) %>%
       ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = target_id)) +
       geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
       geom_hline(yintercept = 0) +
