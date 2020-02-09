@@ -1,6 +1,6 @@
 # Flattened-circadian-glucocorticoid-oscillations
 
-### About
+## About
 This web app is designed to explore specific comparative RNA-seq analysis for the manuscript "Flattened circadian glucocorticoid oscillations cause obesity due to increased lipid turnover and lipid uptake". At the moment two comparative datasets can be explored:
 * WAT tissue - cort pellet vs sham pellet
 * BAT tissue - cort pellet vs sham pellet
@@ -9,14 +9,14 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 
 ---
 
-### Analysis
+## Analysis
 
 #### To do:
 - [ ] GO Term analysis of up and down regulated genes separately 
 - [ ] Differential expression between control conditions
 - [ ] Heat maps to show that there is no time clustering
 
-### Features
+## Features
 
 #### Volcano Plots
 - [x] Volcano plot for WAT
