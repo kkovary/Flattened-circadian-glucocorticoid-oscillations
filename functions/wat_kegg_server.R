@@ -17,7 +17,8 @@ output$wat_kegg_map <- renderImage({
                      same.layer = F,
                      low = list(gene = 'blue'),
                      mid = list(gene = 'transparent'),
-                     high = list(gene = 'red')
+                     high = list(gene = 'red'),
+                     limit = list(gene = c(-2,2))
                      )
   
   
