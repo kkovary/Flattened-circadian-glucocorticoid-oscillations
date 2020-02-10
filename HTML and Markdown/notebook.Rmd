@@ -304,7 +304,7 @@ so_wat_ttest <- kallisto_table(so_wat) %>%
   summarise(fc = mean((est_counts[treatment == 'Cort_pellet'] + 0.5), na.rm = T) / 
               mean((est_counts[treatment == 'Placebo_pellet'] + 0.5), na.rm = T)) %>%
   dplyr::group_by(target_id) %>%
-  dplyr::summarise(fc = 2^mean(log2(fc), na.rm = TRUE))
+  dplyr::summarise(fc = 2^sum(log2(fc), na.rm = TRUE))
 
 # Join 3 methods
 joined_wat_gene_results <- dplyr::full_join(
@@ -440,7 +440,7 @@ so_bat_ttest <- kallisto_table(so_bat) %>%
   summarise(fc = mean((est_counts[treatment == 'Cort_pellet'] + 0.5), na.rm = T) / 
               mean((est_counts[treatment == 'Placebo_pellet'] + 0.5), na.rm = T)) %>%
   dplyr::group_by(target_id) %>%
-  dplyr::summarise(fc = 2^mean(log2(fc), na.rm = TRUE))
+  dplyr::summarise(fc = 2^sum(log2(fc), na.rm = TRUE))
 
 
 # Join 3 methods
