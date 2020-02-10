@@ -31,6 +31,7 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 - [x] GO terms table for BAT
 - [x] Gene table for WAT
 - [x] Gene table for BAT
+- [ ] Downloadable table of genes from selected GO Terms or KEGG pathways
 
 #### Bar Plots
 - [x] Gene level for WAT
