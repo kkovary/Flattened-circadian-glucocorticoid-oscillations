@@ -17,7 +17,7 @@ output$wat_kegg_map <- renderImage({
                      species = 'mmu', 
                      same.layer = F,
                      low = list(gene = 'blue'),
-                     mid = list(gene = 'gray'),
+                     mid = list(gene = 'transparent'),
                      high = list(gene = 'red'))
   
   
