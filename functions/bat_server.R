@@ -230,3 +230,5 @@ output$bat_kegg_table <- DT::renderDataTable({
                 options = list(buttons = c('csv', 'excel'))
   )
 })
+
+

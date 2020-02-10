@@ -1,5 +1,5 @@
 bat_ui <- tabPanel(
-  'BAT Data',
+  'RNA-seq Plots',
   tabsetPanel(
     tabPanel(
       'Volcano Plot',
@@ -30,9 +30,9 @@ bat_ui <- tabPanel(
     ),
     tabPanel('GO Term Table',
              DTOutput('bat_go_terms_table')
-             ),
+    ),
     tabPanel('KEGG Table',
              DTOutput('bat_kegg_table')
-             )
+    )
   )
 )

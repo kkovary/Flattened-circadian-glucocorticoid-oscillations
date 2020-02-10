@@ -1,5 +1,5 @@
 wat_ui <- tabPanel(
-  'WAT Data',
+  'RNA-seq Plots',
   tabsetPanel(
     tabPanel(
       'Volcano Plot',

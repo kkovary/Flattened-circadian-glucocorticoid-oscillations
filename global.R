@@ -5,6 +5,7 @@ library(shinycssloaders)
 library(ggrepel)
 library(DT)
 library(shinyjs)
+library(pathview)
 
 ###################
 # Load data files #
@@ -32,6 +33,7 @@ bat_universe <- readRDS('data/universe_bat.RDS')
 
 # KEGG data
 kegg_genes <- readRDS('data/kegg_genes.RDS')
+kegg_pathway_names <- unique(kegg_genes$Description)
 
 bat_kegg <- left_join(joined_bat_results, kegg_genes, 'ext_gene') %>%
   group_by(kegg_pathway, Description) %>% 
@@ -184,5 +186,4 @@ gene_bp_go <- function(all_cat,
       ggtitle('Selected gene abundances - gene level') +
       xlab('') + ylab(paste0('log2 ',depot,' fold change cort\n pellet / placebo pellet'))
   }
-  
-}
+ }
