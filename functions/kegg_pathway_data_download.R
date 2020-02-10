@@ -1,9 +1,9 @@
-library(limma)
-library(tidyverse)
-library(BiocManager)
-library(pathview)
-library(org.Mm.eg.db)
-library(xml2)
+# library(limma)
+# library(tidyverse)
+# library(BiocManager)
+# library(pathview)
+# library(org.Mm.eg.db)
+# library(xml2)
 
 # Import list of kegg pathway names
 paths.mmu <- kegga(joined_wat_results$ens_gene, species = 'Mmu')
