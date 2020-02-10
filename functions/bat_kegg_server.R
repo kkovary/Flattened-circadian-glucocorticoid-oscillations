@@ -6,8 +6,7 @@ output$bat_kegg_map <- renderImage({
   pathway <- filter(kegg_genes, Description == input$bat_kegg_map)$kegg_pathway[1]
   
   data <- kegg_genes %>% filter(kegg_pathway %in% pathway) %>%
-    dplyr::rename(target_id = ext_gene) %>%
-    left_join(joined_bat_gene_results, by = 'target_id') %>%
+    left_join(joined_bat_results, by = 'ext_gene') %>%
     filter(lrt_qval < 0.05)
   
   genes <- as.vector(log2(data$fc))
@@ -18,7 +17,8 @@ output$bat_kegg_map <- renderImage({
                      same.layer = F,
                      low = list(gene = 'blue'),
                      mid = list(gene = 'transparent'),
-                     high = list(gene = 'red'))
+                     high = list(gene = 'red')
+                     )
   
   
   # Delete unused files
