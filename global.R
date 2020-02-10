@@ -30,9 +30,24 @@ joined_bat_gene_results <- readRDS('data/joined_bat_gene_results.RDS') %>% filte
 bat_go_terms <- readRDS('data/bat_go_terms.RDS')
 bat_universe <- readRDS('data/universe_bat.RDS')
 
+# KEGG data
+kegg_genes <- readRDS('data/kegg_genes.RDS')
+
+bat_kegg <- left_join(joined_bat_results, kegg_genes, 'ext_gene') %>%
+  group_by(kegg_pathway, Description) %>% 
+  summarise(num_transcripts = n(),
+            zscore = (sum(log2(fc) > 0 & lrt_qval < 0.05, na.rm = T) - sum(log2(fc) < 0 & lrt_qval < 0.05, na.rm = T)) / sqrt(n()))
+
+wat_kegg <- left_join(joined_wat_results, kegg_genes, 'ext_gene') %>%
+  group_by(kegg_pathway, Description) %>% 
+  summarise(num_transcripts = n(),
+            zscore = (sum(log2(fc) > 0 & lrt_qval < 0.05, na.rm = T) - sum(log2(fc) < 0 & lrt_qval < 0.05, na.rm = T)) / sqrt(n()))
+
+
 ########################
 # Additional functions #
 ########################
+
 
 #####################
 # Volcano Plot Base #
@@ -81,7 +96,7 @@ tran_bp_gn <- function(selected_genes,
 
 
 ########################################
-# Transcript bar plot: input = GO term #
+# Transcript bar plot: input = GO/KEGG #
 ########################################
 tran_bp_go <- function(selected_genes, 
                        depot){
@@ -121,30 +136,53 @@ gene_bp_gn <- function(selected_genes,
 
 
 ##################################
-# Gene bar plot: input = GO term #
+# Gene bar plot: input = GO/KEGG #
 ##################################
-gene_bp_go <- function(all_go_terms,
-                       selected_go_terms,
+gene_bp_go <- function(all_cat,
+                       selected_cat,
                        universe,
                        gene_df,
-                       depot){
-  selected_go_terms <- all_go_terms[selected_go_terms,]$ID
-  
-  all_go_terms %>% filter(ID %in% selected_go_terms) %>% 
-    mutate(ENTREZID = strsplit(geneID,'/')) %>%
-    dplyr::select(ONTOLOGY, ID, Description, ENTREZID) %>%
-    unnest(cols = ENTREZID) %>% left_join(universe, by = 'ENTREZID') %>%
-    dplyr::rename(target_id = SYMBOL) %>% left_join(gene_df, by = 'target_id') %>%
-    filter(lrt_qval < 0.05) %>% 
+                       depot,
+                       type){
+  if(type == 'go'){
+    selected_cat <- all_cat[selected_cat,]$ID
     
-    ggplot(., aes(x = target_id, y = log2(fc), fill = Description)) +
-    geom_bar(stat = 'identity') +
-    geom_hline(yintercept = 0) +
-    facet_wrap(~Description, scales = 'free_x') +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 50, hjust = 1),
-          panel.spacing = unit(0, "lines"),
-          legend.position="bottom") +
-    ggtitle('Selected gene abundances - gene level') +
-    xlab('') + ylab(paste0('log2 ',depot,' fold change cort\n pellet / placebo pellet'))
+    all_cat %>% filter(ID %in% selected_cat) %>% 
+      mutate(ENTREZID = strsplit(geneID,'/')) %>%
+      dplyr::select(ONTOLOGY, ID, Description, ENTREZID) %>%
+      unnest(cols = ENTREZID) %>% left_join(universe, by = 'ENTREZID') %>%
+      dplyr::rename(target_id = SYMBOL) %>% left_join(gene_df, by = 'target_id') %>%
+      filter(lrt_qval < 0.05) %>% 
+      
+      ggplot(., aes(x = target_id, y = log2(fc), fill = Description)) +
+      geom_bar(stat = 'identity') +
+      geom_hline(yintercept = 0) +
+      facet_wrap(~Description, scales = 'free_x') +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 50, hjust = 1),
+            panel.spacing = unit(0, "lines"),
+            legend.position="bottom") +
+      ggtitle('Selected gene abundances - gene level') +
+      xlab('') + ylab(paste0('log2 ',depot,' fold change cort\n pellet / placebo pellet'))
+  } else if(type == 'kegg'){
+    
+    selected_cat <- all_cat[selected_cat,]$Description
+    
+    universe %>% filter(Description %in% selected_cat) %>%
+      dplyr::rename(target_id = ext_gene) %>%
+      left_join(gene_df, by = 'target_id') %>%
+      filter(lrt_qval < 0.05) %>% 
+      
+      ggplot(., aes(x = target_id, y = log2(fc), fill = Description)) +
+      geom_bar(stat = 'identity') +
+      geom_hline(yintercept = 0) +
+      facet_wrap(~Description, scales = 'free_x') +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 50, hjust = 1),
+            panel.spacing = unit(0, "lines"),
+            legend.position="bottom") +
+      ggtitle('Selected gene abundances - gene level') +
+      xlab('') + ylab(paste0('log2 ',depot,' fold change cort\n pellet / placebo pellet'))
+  }
+  
 }

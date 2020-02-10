@@ -29,6 +29,10 @@ wat_ui <- tabPanel(
       DTOutput('wat_gene_table') %>% withSpinner(type = 6)
     ),
     tabPanel('GO Term Table',
-             DTOutput('wat_go_terms_table'))
+             DTOutput('wat_go_terms_table')
+             ),
+    tabPanel('KEGG Table',
+             DTOutput('wat_kegg_table')
+             )
   )
 )

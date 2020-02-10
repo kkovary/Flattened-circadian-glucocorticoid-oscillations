@@ -7,7 +7,7 @@ ui <- navbarPage(
     'Introduction',
     
     shiny::includeHTML(
-      'HTML and Markdown/Flattened-circadian-glucocorticoid-oscillations-cause-obesity-due-to-increased.html'
+      'HTML and Markdown/notebook.html'
     )
 
     

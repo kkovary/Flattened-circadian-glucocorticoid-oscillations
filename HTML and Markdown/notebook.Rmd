@@ -991,6 +991,7 @@ ggplot(filter(goDF, ONTOLOGY == 'BP'),
                   force = 10) +
   theme_bw() + ggtitle('GO Term Analysis: BAT Cort Pellet vs Placebo Pellet')
 ```
+
 Not much for me to say here, we can take a closer look at this and decide how best to represent it. I can also provide a table in case you guys want to comb through these to see if you find something that you'd like to highlight in the manuscript. I think the potentially more interesting GO Term analysis comes when comparing BAT and WAT.
 
 ### Overlap between WAT and BAT

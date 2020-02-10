@@ -29,6 +29,10 @@ bat_ui <- tabPanel(
       DTOutput('bat_gene_table') %>% withSpinner(type = 6)
     ),
     tabPanel('GO Term Table',
-             DTOutput('bat_go_terms_table'))
+             DTOutput('bat_go_terms_table')
+             ),
+    tabPanel('KEGG Table',
+             DTOutput('bat_kegg_table')
+             )
   )
 )

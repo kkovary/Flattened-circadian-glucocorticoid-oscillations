@@ -14,6 +14,11 @@ observeEvent(input$wat_go_terms_table_rows_selected, {
   selectRows(proxy_wat_gene_table, NULL)
 })
 
+# All rows are unselected when KEGG row is selected
+observeEvent(input$wat_kegg_table_rows_selected, {
+  selectRows(proxy_wat_gene_table, NULL)
+})
+
 # When selecting points on plot all selected gene names are selected
 observeEvent(input$wat_vol_plot_brush, {
   dims <- input$wat_vol_plot_brush
@@ -37,9 +42,34 @@ observeEvent(input$wat_gene_table_rows_selected, {
   selectRows(proxy_wat_go_terms_table, NULL)
 })
 
+# All rows are unselected when KEGG row is selected
+observeEvent(input$wat_kegg_table_rows_selected, {
+  selectRows(proxy_wat_go_terms_table, NULL)
+})
+
 # When selecting points on plot all rows are unselected
 observeEvent(input$wat_vol_plot_brush, {
   selectRows(proxy_wat_go_terms_table, NULL)
+})
+
+##############################
+# Clear KEGG table selection #
+##############################
+
+# When clicking on gene table all rows are unselected
+proxy_wat_kegg_table = dataTableProxy('wat_kegg_table')
+observeEvent(input$wat_gene_table_rows_selected, {
+  selectRows(proxy_wat_go_terms_table, NULL)
+})
+
+# When clicking on GO Terms table all rows are unselected
+observeEvent(input$wat_go_terms_table_rows_selected, {
+  selectRows(proxy_wat_kegg_table, NULL)
+})
+
+# When selecting points on plot all rows are unselected
+observeEvent(input$wat_vol_plot_brush, {
+  selectRows(proxy_wat_kegg_table, NULL)
 })
 
 ##########################################
@@ -59,6 +89,12 @@ wat_highlighted_genes <- reactive({
       unnest(cols = ENTREZID) %>% left_join(wat_universe, by = 'ENTREZID') %>%
       dplyr::rename(ext_gene = SYMBOL) %>% left_join(joined_wat_results, by = 'ext_gene') %>%
       filter(lrt_qval < 0.05)
+  } else if(length(input$wat_kegg_table_rows_selected) > 0){
+    
+    selected_kegg <- wat_kegg[input$wat_kegg_table_rows_selected,]$Description
+    
+    left_join(joined_wat_results, kegg_genes, 'ext_gene') %>%
+      filter(Description %in% selected_kegg, lrt_qval < 0.05)
   }
 })
 
@@ -90,6 +126,14 @@ output$wat_vol_plot <- renderPlot({
                  data = wat_highlighted_genes(),
                  aes(color = Description)) +
       labs(color = "Gene Name")
+  } else if(length(input$wat_kegg_table_rows_selected) > 0){
+    vol_plot_base(joined_wat_results, 'WAT') +
+      geom_point(alpha = 1, 
+                 size = 3, 
+                 stroke = 0, 
+                 data = wat_highlighted_genes(),
+                 aes(color = Description)) +
+      labs(color = "Gene Name")
   } else{
     vol_plot_base(joined_wat_results, 'WAT')
   }
@@ -109,8 +153,17 @@ output$wat_gene_bar_plot <- renderPlot({
                input$wat_go_terms_table_rows_selected,
                wat_universe,
                joined_wat_gene_results,
-               'WAT')
+               'WAT',
+               'go')
     
+  } else if(length(input$wat_kegg_table_rows_selected) > 0){
+    
+    gene_bp_go(wat_kegg, 
+               input$wat_kegg_table_rows_selected,
+               kegg_genes,
+               joined_wat_gene_results,
+               'WAT',
+               'kegg')
   } else{
     NULL
   }
@@ -125,6 +178,10 @@ output$wat_transcript_bar_plot <- renderPlot({
     tran_bp_gn(wat_highlighted_genes(),'WAT')
     
   } else if(length(input$wat_go_terms_table_rows_selected) > 0){
+    
+    tran_bp_go(wat_highlighted_genes(),'WAT')
+    
+  } else if(length(input$wat_kegg_table_rows_selected) > 0){
     
     tran_bp_go(wat_highlighted_genes(),'WAT')
     
@@ -162,4 +219,15 @@ output$wat_go_terms_table <- DT::renderDataTable({
                 selection = 'multiple',
                 options = list(buttons = c('csv', 'excel'))
   )
+})
+
+#####################
+# KEGG Table Output #
+#####################
+output$wat_kegg_table <- DT::renderDataTable({
+  
+    DT::datatable(wat_kegg,
+                  selection = 'multiple',
+                  options = list(buttons = c('csv', 'excel'))
+    )
 })

@@ -14,6 +14,11 @@ observeEvent(input$bat_go_terms_table_rows_selected, {
   selectRows(proxy_bat_gene_table, NULL)
 })
 
+# All rows are unselected when KEGG row is selected
+observeEvent(input$bat_kegg_table_rows_selected, {
+  selectRows(proxy_bat_gene_table, NULL)
+})
+
 # When selecting points on plot all selected gene names are selected
 observeEvent(input$bat_vol_plot_brush, {
   dims <- input$bat_vol_plot_brush
@@ -37,9 +42,34 @@ observeEvent(input$bat_gene_table_rows_selected, {
   selectRows(proxy_bat_go_terms_table, NULL)
 })
 
+# All rows are unselected when KEGG row is selected
+observeEvent(input$bat_kegg_table_rows_selected, {
+  selectRows(proxy_bat_go_terms_table, NULL)
+})
+
 # When selecting points on plot all rows are unselected
 observeEvent(input$bat_vol_plot_brush, {
   selectRows(proxy_bat_go_terms_table, NULL)
+})
+
+##############################
+# Clear KEGG table selection #
+##############################
+
+# When clicking on gene table all rows are unselected
+proxy_bat_kegg_table = dataTableProxy('bat_kegg_table')
+observeEvent(input$bat_gene_table_rows_selected, {
+  selectRows(proxy_bat_go_terms_table, NULL)
+})
+
+# When clicking on GO Terms table all rows are unselected
+observeEvent(input$bat_go_terms_table_rows_selected, {
+  selectRows(proxy_bat_kegg_table, NULL)
+})
+
+# When selecting points on plot all rows are unselected
+observeEvent(input$bat_vol_plot_brush, {
+  selectRows(proxy_bat_kegg_table, NULL)
 })
 
 ##########################################
@@ -59,6 +89,12 @@ bat_highlighted_genes <- reactive({
       unnest(cols = ENTREZID) %>% left_join(bat_universe, by = 'ENTREZID') %>%
       dplyr::rename(ext_gene = SYMBOL) %>% left_join(joined_bat_results, by = 'ext_gene') %>%
       filter(lrt_qval < 0.05)
+  } else if(length(input$bat_kegg_table_rows_selected) > 0){
+    
+    selected_kegg <- bat_kegg[input$bat_kegg_table_rows_selected,]$Description
+    
+    left_join(joined_bat_results, kegg_genes, 'ext_gene') %>%
+      filter(Description %in% selected_kegg, lrt_qval < 0.05)
   }
 })
 
@@ -69,7 +105,7 @@ bat_highlighted_genes <- reactive({
 output$bat_vol_plot <- renderPlot({
   if(length(input$bat_gene_table_rows_selected) > 0){
     
-    vol_plot_base(joined_wat_results, 'BAT') +
+    vol_plot_base(joined_bat_results, 'BAT') +
       
       geom_point(alpha = 0.8, 
                  size = 4, 
@@ -83,7 +119,15 @@ output$bat_vol_plot <- renderPlot({
                        force = 20) +
       labs(color = "Gene Name")
   } else if(length(input$bat_go_terms_table_rows_selected) > 0){
-    vol_plot_base(joined_wat_results, 'BAT') +
+    vol_plot_base(joined_bat_results, 'BAT') +
+      geom_point(alpha = 1, 
+                 size = 3, 
+                 stroke = 0, 
+                 data = bat_highlighted_genes(),
+                 aes(color = Description)) +
+      labs(color = "Gene Name")
+  } else if(length(input$bat_kegg_table_rows_selected) > 0){
+    vol_plot_base(joined_bat_results, 'BAT') +
       geom_point(alpha = 1, 
                  size = 3, 
                  stroke = 0, 
@@ -91,7 +135,7 @@ output$bat_vol_plot <- renderPlot({
                  aes(color = Description)) +
       labs(color = "Gene Name")
   } else{
-    vol_plot_base(joined_wat_results, 'BAT')
+    vol_plot_base(joined_bat_results, 'BAT')
   }
 })
 
@@ -105,11 +149,20 @@ output$bat_gene_bar_plot <- renderPlot({
     
   } else if(length(input$bat_go_terms_table_rows_selected) > 0){
     
-    gene_bp_go(wat_go_terms, 
+    gene_bp_go(bat_go_terms, 
                input$bat_go_terms_table_rows_selected,
                bat_universe,
                joined_bat_gene_results,
-               'BAT')
+               'BAT',
+               'go')
+  } else if(length(input$bat_kegg_table_rows_selected) > 0){
+    
+    gene_bp_go(bat_kegg, 
+               input$bat_kegg_table_rows_selected,
+               kegg_genes,
+               joined_bat_gene_results,
+               'BAT',
+               'kegg')
   } else{
     NULL
   }
@@ -124,6 +177,10 @@ output$bat_transcript_bar_plot <- renderPlot({
     tran_bp_gn(bat_highlighted_genes(),'BAT')
     
   } else if(length(input$bat_go_terms_table_rows_selected) > 0){
+    
+    tran_bp_go(bat_highlighted_genes(),'BAT')
+    
+  } else if(length(input$bat_kegg_table_rows_selected) > 0){
     
     tran_bp_go(bat_highlighted_genes(),'BAT')
     
@@ -158,6 +215,17 @@ output$bat_go_terms_table <- DT::renderDataTable({
                               Count,
                               p.adjust,
                               zscore),
+                selection = 'multiple',
+                options = list(buttons = c('csv', 'excel'))
+  )
+})
+
+#####################
+# KEGG Table Output #
+#####################
+output$bat_kegg_table <- DT::renderDataTable({
+  
+  DT::datatable(bat_kegg,
                 selection = 'multiple',
                 options = list(buttons = c('csv', 'excel'))
   )
