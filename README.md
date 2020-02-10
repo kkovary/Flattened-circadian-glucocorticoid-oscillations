@@ -23,8 +23,8 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 - [x] Volcano plot for BAT
 - [x] Color layer of selected GO terms for WAT
 - [x] Color layer of selected GO terms for BAT
-- [ ] Color layer of selected KEGG pathway categories for WAT
-- [ ] Color layer of selected KEGG pathway categories for BAT
+- [x] Color layer of selected KEGG pathway categories for WAT
+- [x] Color layer of selected KEGG pathway categories for BAT
 
 #### Tables
 - [x] GO terms table for WAT
