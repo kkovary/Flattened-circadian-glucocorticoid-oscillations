@@ -13,8 +13,8 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 
 #### To do:
 - [ ] GO Term analysis of up and down regulated genes separately 
-- [ ] Differential expression between control conditions
 - [ ] Heat maps to show that there is no time clustering
+- [x] Differential expression between control conditions
 
 ## Features
 
@@ -27,6 +27,7 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 - [x] Color layer of selected KEGG pathway categories for BAT
 
 #### Tables
+- [ ] Downloadable table of genes from selected GO Terms or KEGG pathways
 - [x] GO terms table for WAT
 - [x] GO terms table for BAT
 - [x] Gene table for WAT
