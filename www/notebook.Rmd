@@ -3,7 +3,7 @@ Type: Shiny
 title: Flattened circadian glucocorticoid oscillations cause obesity due to increased
   lipid turnover and lipid uptake
 author: Tholen S., Kovary K.M., Rabiee A., Bielczyk-Maczyńska E., Yang W., and Teruel M.N.
-date: 'Updated: `r format(Sys.time())`'
+date: 'Updated: `r Sys.time()`'
 output:
       html_document:
         highlight: tango
@@ -221,8 +221,6 @@ for(i in 1:nrow(all_comp)){
 all_lrt <- all_lrt %>% unite(comp,cond_1:cond_2, sep = '_vs_', remove = FALSE) %>%
   dplyr::select(depot, comp, cond_1, cond_2, everything())
 saveRDS(all_lrt, file = '~/Documents/GitHub/ShinyApps/Flattened-circadian-glucocorticoid-oscillations/data/all_lrt.RDS')
-
-#table(lrt_results[, "lrt_qval"] < 0.05)
 ```
 
 ```{r}
