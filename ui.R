@@ -8,8 +8,13 @@ ui <- navbarPage(
   tabPanel(
     'Introduction',
     
-    shiny::includeHTML(
-      'HTML and Markdown/notebook.html'
+    # shiny::includeHTML(
+    #   'HTML and Markdown/notebook.html'
+    # )
+    
+    tags$iframe(src = 'znotebook.html', # put myMarkdown.html to /www
+                width = '100%', height = '800px', 
+                frameborder = 0, scrolling = 'auto'
     )
     
     

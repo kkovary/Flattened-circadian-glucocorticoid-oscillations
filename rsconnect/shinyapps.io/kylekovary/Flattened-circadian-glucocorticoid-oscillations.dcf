@@ -5,9 +5,8 @@ account: kylekovary
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1780777
-bundleId: 2785267
+bundleId: 2789815
 url: https://kylekovary.shinyapps.io/Flattened-circadian-glucocorticoid-oscillations/
-when: 1581206749.75712
+when: 1581364666.40202
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: HTML and Markdown/Flattened circadian glucocorticoid oscillations cause obesity due to increased.Rmd

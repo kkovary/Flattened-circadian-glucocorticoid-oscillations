@@ -3,6 +3,13 @@
 ###################
 output$bat_kegg_map <- renderImage({
   
+  currentFiles <- list.files('.')
+  png <- grep('.png',currentFiles)
+  if(length(png) > 1){
+    file.remove(currentFiles[png])
+  }
+  
+  
   pathway <- filter(kegg_genes, Description == input$bat_kegg_map)$kegg_pathway[1]
   
   data <- kegg_genes %>% filter(kegg_pathway %in% pathway) %>%
