@@ -13,7 +13,7 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 
 #### To do:
 - [ ] GO Term analysis of up and down regulated genes separately 
-- [ ] Differential expression between control conditions
+- [x] Differential expression between control conditions
 - [ ] Heat maps to show that there is no time clustering
 
 ## Features
