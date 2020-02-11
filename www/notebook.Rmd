@@ -247,7 +247,7 @@ all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>%
   geom_bar(stat = 'identity') + 
   scale_fill_manual("Cort Pellet", values = c('no' = "#bababa", 'yes' = "#007BA7")) +
   facet_wrap(~depot) + 
-  scale_y_log10() + annotation_logticks(sides = 'l') + 
+  #scale_y_log10() + annotation_logticks(sides = 'l') + 
   theme_bw() + 
   theme(text = element_text(size=15),
         axis.text.x = element_text(angle = 70, hjust = 1, size = 10))  + 
