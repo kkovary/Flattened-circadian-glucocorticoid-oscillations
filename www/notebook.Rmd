@@ -236,6 +236,23 @@ all_lrt %>% group_by(depot, cond_1, cond_2) %>% summarise(num_sig = sum(lrt_qval
     kable(escape = F) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 
+all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
+  summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
+  mutate(`Cort Pellet` = ifelse(cond_1  == 'Cort_pellet' | cond_2 == 'Cort_pellet','yes','no'))%>%
+  ungroup() %>%
+  ggplot(., 
+         aes(x = fct_reorder(comp, num_sig), 
+             y = num_sig, 
+             fill = `Cort Pellet`)) + 
+  geom_bar(stat = 'identity') + 
+  scale_fill_manual("Cort Pellet", values = c('no' = "#bababa", 'yes' = "#007BA7")) +
+  facet_wrap(~depot) + 
+  scale_y_log10() + annotation_logticks(sides = 'l') + 
+  theme_bw() + 
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(angle = 70, hjust = 1, size = 10))  + 
+  xlab('') + ylab('Number of significantly\n changed transcripts')
+
 ```
 
 As you can see, in both tissues the main driver of differential expression of mRNA is the cort pellet. Since, in our opinion, the placebo pellet is the best control condition to compare the cort pellet against, it is what we will be comparing the cort pellet against in WAT and BAT tissue going forward.
