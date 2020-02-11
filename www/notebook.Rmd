@@ -229,7 +229,11 @@ saveRDS(all_lrt, file = '~/Documents/GitHub/ShinyApps/Flattened-circadian-glucoc
 all_lrt <- readRDS('../data/all_lrt.RDS')
 
 all_lrt %>% group_by(depot, cond_1, cond_2) %>% summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
-  kable() %>%
+  ungroup() %>% mutate_all(~cell_spec(
+        ., 
+        color = ifelse(. == 'Cort_pellet', "white", "black"),
+        background = ifelse(. == 'Cort_pellet', "#007BA7","transparent"))) %>%
+    kable(escape = F) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 
 ```
@@ -1349,7 +1353,7 @@ One thing that puzzled me at first was the up regulation of two TFs in the upper
 
 
 
-## Conclusions and next steps
+# Conclusions and next steps
 
 * I still need to do the oPOSSUM analysis for the BAT tissue, and would also like to use another program called Pscan that does the same thing to see how well they agree with one another.
 * Let me know what other plots or analysis you think we need and which ones you would like to include for sure and I will finalize those plots and put them into the figures.
