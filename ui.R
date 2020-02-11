@@ -9,7 +9,7 @@ ui <- navbarPage(
   tabPanel(
     'Introduction',
     
-    tags$iframe(src = 'notebook.html', # put myMarkdown.html to /www
+    tags$iframe(src = 'notebook.html', # put notebook.html in /www
                 width = '100%', height = '800px', 
                 frameborder = 0, scrolling = 'auto'
     )
