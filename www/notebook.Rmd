@@ -21,8 +21,13 @@ This is a summary of the RNA-seq analysis between the BAT and WAT tissues that w
 
 
 ```{r setup, message=FALSE, warning=FALSE}
-#code_folding: hide
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# Set global options
+knitr::opts_chunk$set(echo = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE, 
+                      fig.align = 'center')
+
+# Required libraries
 library(tidyverse)
 library(sleuth)
 library(readxl)
@@ -1347,9 +1352,4 @@ One thing that puzzled me at first was the up regulation of two TFs in the upper
 ## Conclusions and next steps
 
 * I still need to do the oPOSSUM analysis for the BAT tissue, and would also like to use another program called Pscan that does the same thing to see how well they agree with one another.
-* I think it would also be important to show (likely in the supplement) volcano plots of deferentially expressed genes (or lack there of) between other conditions such as:
-  + cort injection vs placebo injection
-  + placebo pellet vs placebo injection
-  + cort injection vs placebo pellet
-* This can either be done separately or all together, using the likelihood ratio test model on all of those data sets at once. From my previous analysis I think the number of hits should be few to none.
 * Let me know what other plots or analysis you think we need and which ones you would like to include for sure and I will finalize those plots and put them into the figures.

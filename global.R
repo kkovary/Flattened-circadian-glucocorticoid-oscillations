@@ -1,5 +1,5 @@
 library(shiny)
-#library(shinythemes)
+library(shinythemes)
 library(tidyverse)
 library(shinyWidgets)
 library(shinycssloaders)
