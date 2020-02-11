@@ -12,7 +12,7 @@ ui <- navbarPage(
     #   'HTML and Markdown/notebook.html'
     # )
     
-    tags$iframe(src = 'znotebook.html', # put myMarkdown.html to /www
+    tags$iframe(src = 'notebook.html', # put myMarkdown.html to /www
                 width = '100%', height = '800px', 
                 frameborder = 0, scrolling = 'auto'
     )
