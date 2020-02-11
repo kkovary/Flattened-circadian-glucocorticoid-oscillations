@@ -14,6 +14,8 @@ Web page located at: https://kylekovary.shinyapps.io/Flattened-circadian-glucoco
 #### To do:
 - [ ] GO Term analysis of up and down regulated genes separately 
 - [ ] Heat maps to show that there is no time clustering
+- [ ] GeneWalk analysis
+- [ ] oPOSSUM and pscan analysis for BAT and WAT
 - [x] Differential expression between control conditions
 
 ## Features
