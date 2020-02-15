@@ -13,7 +13,6 @@ output:
         code_folding: hide
   
 ---
-\fontsize{6}{8}
 
 # Introduction
 
@@ -157,103 +156,6 @@ t2g <- dplyr::rename(t2g,
 
 ```
 
-## Number of differentially expressed transcripts across all sample conditions
-
-```{r eval=FALSE, include=TRUE}
-#######################
-# All LRT Comparisons #
-#######################
-
-depot <- unique(s2c$depot)
-treatment <- filter(s2c, delivery != 'na')$treatment %>% unique()
-
-all_comp <- tibble(depot = rep(depot, each = 6),
-                   cond_1 = rep(t(combn(treatment, 2))[,1], times = 2),
-                   cond_2 = rep(t(combn(treatment, 2))[,2], times = 2)
-                   )
-
-for(i in 1:nrow(all_comp)){
-  
-  # Create metadata data frame
-  s2c_comp <- s2c %>% filter(depot == all_comp$depot[i],
-                             treatment %in% c(all_comp$cond_1[i], all_comp$cond_2[i]))
-  
-  # Import data and create sleuth object
-  so <- sleuth_prep(
-    s2c_comp,
-    target_mapping = t2g,
-    num_cores = max(1L, parallel::detectCores() - 1L),
-    aggregation_column = 'ext_gene',
-    extra_bootstrap_summary = TRUE
-  )
-  
-  # LRT
-  full_design <- model.matrix(formula(~ treatment + lane), 
-                              data = s2c_comp, 
-                              contrasts.arg = list(treatment = c(1,0)))
-  so <- sleuth_fit(so, 
-                       formula = full_design,
-                       #gene_mode = TRUE,
-                       fit_name = "full")
-  so <- sleuth_fit(so, 
-                       formula = ~ s2c_comp$lane, 
-                       #gene_mode = TRUE,
-                       fit_name = "reduced")
-  
-  so <- sleuth_lrt(so, "reduced", "full")
-  lrt_results <- sleuth_results(so, 
-                                'reduced:full', 
-                                test_type = 'lrt', 
-                                pval_aggregate = FALSE) %>%
-    dplyr::rename(lrt_qval = qval) %>%
-    mutate(depot = all_comp$depot[i],
-           cond_1 = all_comp$cond_1[i],
-           cond_2 = all_comp$cond_2[i])
-  
-  if(exists('all_lrt')){
-    all_lrt <- rbind(all_lrt, lrt_results)
-  } else{
-    all_lrt <- lrt_results
-  }
-  print(paste0('Loop 'i,'/',nrow(all_comp)))
-}
-
-all_lrt <- all_lrt %>% unite(comp,cond_1:cond_2, sep = '_vs_', remove = FALSE) %>%
-  dplyr::select(depot, comp, cond_1, cond_2, everything())
-saveRDS(all_lrt, file = '~/Documents/GitHub/ShinyApps/Flattened-circadian-glucocorticoid-oscillations/data/all_lrt.RDS')
-```
-
-```{r}
-all_lrt <- readRDS('../data/all_lrt.RDS')
-
-all_lrt %>% group_by(depot, cond_1, cond_2) %>% summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
-  ungroup() %>% mutate_all(~cell_spec(
-        ., 
-        color = ifelse(. == 'Cort_pellet', "white", "black"),
-        background = ifelse(. == 'Cort_pellet', "#007BA7","transparent"))) %>%
-    kable(escape = F) %>%
-  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
-
-all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
-  summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
-  mutate(`Cort Pellet` = ifelse(cond_1  == 'Cort_pellet' | cond_2 == 'Cort_pellet','yes','no'))%>%
-  ungroup() %>%
-  ggplot(., 
-         aes(x = fct_reorder(comp, num_sig), 
-             y = num_sig, 
-             fill = `Cort Pellet`)) + 
-  geom_bar(stat = 'identity') + 
-  scale_fill_manual("Cort Pellet", values = c('no' = "#bababa", 'yes' = "#007BA7")) +
-  facet_wrap(~depot) + 
-  #scale_y_log10() + annotation_logticks(sides = 'l') + 
-  theme_bw() + 
-  theme(text = element_text(size=15),
-        axis.text.x = element_text(angle = 70, hjust = 1, size = 10))  + 
-  xlab('') + ylab('Number of significantly\n changed transcripts')
-
-```
-
-As you can see, in both tissues the main driver of differential expression of mRNA is the cort pellet. Since, in our opinion, the placebo pellet is the best control condition to compare the cort pellet against, it is what we will be comparing the cort pellet against in WAT and BAT tissue going forward.
 
 ## Import data for WAT and BAT cort pellet vs placebo pellet conditions
 
@@ -294,13 +196,16 @@ This is the meat of the analysis and is based on what I showed in lab meeting th
 
 This is done for both WAT and BAT, as well as for transcript level analysis and gene level analysis.
 
-```{r eval=FALSE, message=FALSE, warning=FALSE}
+```{r}
 #########################
 # Import sleuth objects #
 #########################
 so_wat <- sleuth_load('~/Documents/GitHub/ShinyApps/InVivoRNAseq/data/so_wat')
 so_bat <- sleuth_load('~/Documents/GitHub/ShinyApps/InVivoRNAseq/data/so_bat')
+```
 
+
+```{r eval=FALSE, message=FALSE, warning=FALSE}
 ###################################
 # WAT Transcript level comparison #
 ###################################
@@ -460,17 +365,17 @@ lrt_results <- sleuth_results(so_bat,
                               test_type = 'lrt', 
                               pval_aggregate = FALSE) %>%
   dplyr::rename(lrt_qval = qval)
-#table(lrt_results[, "lrt_qval"] < 0.05)
+table(lrt_results[, "lrt_qval"] < 0.05)
 
 # Wald Test
 #models(so_bat)
 
-so_bat <- sleuth_wt(so_bat, which_beta = 'treatment1')
-wt_results <- sleuth_results(so_bat, 
-                             'treatment1', 
-                             test_type = 'wt', 
-                             pval_aggregate = FALSE) %>%
-  dplyr::rename(wt_qval = qval)
+# so_bat <- sleuth_wt(so_bat, which_beta = 'treatment1')
+# wt_results <- sleuth_results(so_bat, 
+#                              'treatment1', 
+#                              test_type = 'wt', 
+#                              pval_aggregate = FALSE) %>%
+#   dplyr::rename(wt_qval = qval)
 #table(wt_results[, "wt_qval"] < 0.05)
 
 # Fold change / adjusted pval
@@ -491,14 +396,15 @@ joined_bat_results <- dplyr::full_join(
                 fc),
   by = "target_id"
 ) %>%
-  dplyr::full_join(
-    dplyr::select(wt_results,
-                  target_id,
-                  b,
-                  wt_qval),
-    by = 'target_id'
-  ) %>% dplyr::as_tibble() %>% 
-  dplyr::select(target_id, ens_gene, ext_gene, external_transcript_name, fc, b, everything()) %>%
+  # dplyr::full_join(
+  #   dplyr::select(wt_results,
+  #                 target_id,
+  #                 b,
+  #                 wt_qval),
+  #   by = 'target_id'
+  # ) %>% 
+  dplyr::as_tibble() %>% 
+  dplyr::select(target_id, ens_gene, ext_gene, external_transcript_name, fc, everything()) %>%
   dplyr::mutate(Direction = ifelse(lrt_qval < 0.05 & log2(fc) > 0,
                             'Up',
                             ifelse(lrt_qval < 0.05 & log2(fc) < 0,
@@ -600,11 +506,179 @@ joined_bat_gene_results <- readRDS('../data/joined_bat_gene_results.RDS')
 
 # Data Analysis
 
+## Comparing differential expression across conditions
+
+### Number of differentially expressed transcripts across all sample condition comparisons
+
+```{r eval=FALSE, include=TRUE}
+#######################
+# All LRT Comparisons #
+#######################
+
+depot <- unique(s2c$depot)
+treatment <- filter(s2c, delivery != 'na')$treatment %>% unique()
+
+all_comp <- tibble(depot = rep(depot, each = 6),
+                   cond_1 = rep(t(combn(treatment, 2))[,1], times = 2),
+                   cond_2 = rep(t(combn(treatment, 2))[,2], times = 2)
+                   )
+
+for(i in 1:nrow(all_comp)){
+  
+  # Create metadata data frame
+  s2c_comp <- s2c %>% filter(depot == all_comp$depot[i],
+                             treatment %in% c(all_comp$cond_1[i], all_comp$cond_2[i]))
+  
+  # Import data and create sleuth object
+  so <- sleuth_prep(
+    s2c_comp,
+    target_mapping = t2g,
+    num_cores = max(1L, parallel::detectCores() - 1L),
+    aggregation_column = 'ext_gene',
+    extra_bootstrap_summary = TRUE
+  )
+  
+  # LRT
+  full_design <- model.matrix(formula(~ treatment + lane), 
+                              data = s2c_comp, 
+                              contrasts.arg = list(treatment = c(1,0)))
+  so <- sleuth_fit(so, 
+                       formula = full_design,
+                       #gene_mode = TRUE,
+                       fit_name = "full")
+  so <- sleuth_fit(so, 
+                       formula = ~ s2c_comp$lane, 
+                       #gene_mode = TRUE,
+                       fit_name = "reduced")
+  
+  so <- sleuth_lrt(so, "reduced", "full")
+  lrt_results <- sleuth_results(so, 
+                                'reduced:full', 
+                                test_type = 'lrt', 
+                                pval_aggregate = FALSE) %>%
+    dplyr::rename(lrt_qval = qval) %>%
+    mutate(depot = all_comp$depot[i],
+           cond_1 = all_comp$cond_1[i],
+           cond_2 = all_comp$cond_2[i])
+  
+  if(exists('all_lrt')){
+    all_lrt <- rbind(all_lrt, lrt_results)
+  } else{
+    all_lrt <- lrt_results
+  }
+  print(paste0('Loop ',i,'/',nrow(all_comp)))
+}
+
+all_lrt <- all_lrt %>% unite(comp,cond_1:cond_2, sep = '_vs_', remove = FALSE) %>%
+  dplyr::select(depot, comp, cond_1, cond_2, everything())
+saveRDS(all_lrt, file = '~/Documents/GitHub/ShinyApps/Flattened-circadian-glucocorticoid-oscillations/data/all_lrt.RDS')
+```
+
+```{r}
+all_lrt <- readRDS('../data/all_lrt.RDS')
+
+all_lrt %>% group_by(depot, cond_1, cond_2) %>% summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
+  ungroup() %>% mutate_all(~cell_spec(
+        ., 
+        color = ifelse(. == 'Cort_pellet', "white", "black"),
+        background = ifelse(. == 'Cort_pellet', "#007BA7","transparent"))) %>%
+    kable(escape = F) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
+  summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
+  mutate(`Cort Pellet` = ifelse(cond_1  == 'Cort_pellet' | cond_2 == 'Cort_pellet','yes','no'))%>%
+  ungroup() %>%
+  ggplot(., 
+         aes(x = fct_reorder(comp, num_sig), 
+             y = num_sig, 
+             fill = `Cort Pellet`)) + 
+  geom_bar(stat = 'identity') + 
+  scale_fill_manual("Cort Pellet", values = c('no' = "#bababa", 'yes' = "#007BA7")) +
+  facet_wrap(~depot) + 
+  #scale_y_log10() + annotation_logticks(sides = 'l') + 
+  theme_bw() + 
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(angle = 70, hjust = 1, size = 10))  + 
+  xlab('') + ylab('Number of significantly\n changed transcripts')
+
+```
+
+As you can see, in both tissues the main driver of differential expression of mRNA is the cort pellet. Since, in our opinion, the placebo pellet is the best control condition to compare the cort pellet against, it is what we will be comparing the cort pellet against in WAT and BAT tissue going forward.
+
+### PCA Analysis
+
+```{r}
+spread_abundance_by <- function(abund, var, which_order) {
+  # Copied from sleuth.R from the sleuth library
+
+  abund <- data.table::as.data.table(abund)
+  var_spread <- data.table::dcast(abund, target_id ~ sample, value.var = var)
+
+  var_spread <- var_spread[order(var_spread$target_id), ]
+  var_spread <- as.data.frame(var_spread, stringsAsFactors = FALSE)
+  rownames(var_spread) <- var_spread$target_id
+  var_spread["target_id"] <- NULL
+  result <- as.matrix(var_spread)
+
+  result[, which_order, drop = FALSE]
+}
+
+so_pca <- function(so_object, cutoff_data){
+  
+  # Modified from sleuth::plot_pca
+  mat <- left_join(so_object$obs_norm, cutoff_data, by = 'target_id') %>%
+  dplyr::filter(lrt_qval < 0.05) %>%
+  spread_abundance_by('est_counts', so_object$sample_to_covariates$sample)
+  
+  pca_res <- prcomp(t(mat), scale. = T)
+  pcs <- as.data.frame(pca_res$x[, c('PC1', 'PC2')])
+  pcs$sample <- rownames(pcs)
+  rownames(pcs) <- NULL
+
+  dplyr::left_join(pcs, so_object$sample_to_covariates,
+    by = 'sample')
+}
+```
+
+
+#### WAT
+```{r fig.height=5, fig.width=5}
+so_pca(so_wat, joined_wat_results) %>%
+  mutate(day = fct_reorder(day, as.numeric(day))) %>%
+
+ggplot(., aes(x = PC1, y = PC2)) + 
+  stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
+  geom_point(aes(color = treatment, shape = day), size = 2.5) + 
+  theme_bw() + ggtitle('WAT: Clustered by Treatment') +
+  #xlim(-260,260) + ylim(-100,100) +
+  theme(text = element_text(size=10),
+          legend.position="bottom")
+  
+```
+
+
+#### BAT
+```{r fig.height=5, fig.width=5}
+so_pca(so_bat, joined_bat_results) %>%
+  mutate(day = fct_reorder(day, as.numeric(day))) %>%
+
+ggplot(., aes(x = PC1, y = PC2)) + 
+  stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
+  geom_point(aes(color = treatment, shape = day), size = 2.5) + 
+  theme_bw() + ggtitle('BAT: Clustered by Treatment') +
+  #xlim(-260,260) + ylim(-100,100) +
+  theme(text = element_text(size=10),
+          legend.position="bottom")
+  
+```
+
+These plots show PCA analysis done with the differentially expressed transcripts (lrt qvalue < 0.05). The ellipses represent 95% confidence intervals of the multivariate t-distributions. From this it is clear that the majority of mRNA differential expression is driven by the cort pellet with minimal to no effect on durration of treatment. For this reason all analysis going forward pools all samples by tissue (BAT/WAT) and treatment(cort pellet vs. placebo pellet) and ignores treatment length.
+
 ## Volcano Plots
 
 ### WAT
 
-#### Transcript level
 ```{r fig.height=6, fig.width=6}
 ########################
 # WAT Transcript level #
@@ -625,7 +699,8 @@ joined_wat_results <-
              'Circadian rhythm',
              NA)
     )
-  )) %>%
+  )
+  ) %>%
   mutate(Category = factor(Category, 
                            levels = c('Glycolytic enzymes and regulators',
                                       'Lipid metabolism',
@@ -668,78 +743,8 @@ ggplot(filter(joined_wat_results, !is.na(Direction)),
 
 Volcano plot of deferentially expressed transcripts between cort vs placebo pellet WAT. Genes from Stefan's figure 6D are highlighted here.
 
-#### Gene level
-
-```{r fig.height=6, fig.width=6}
-##################
-# WAT Gene level #
-##################
-gly_enz <- c('Pfkl', 'Aldoa', 'Tpi1', 'Gapdh', 'Pgam1', 'Pkm', 'Pdha1', 'Dlat', 'Pdk4')
-lipid_met <- c('Acaca', 'Fasn', 'Scd1', 'Scd2', 'Lpgat1', 'Acadm', 'Pnpla2', 'Lep', 'Hsd11b1', 'Cd36')
-circ_rhy <- c('Clock', 'Arntl','Per3','Ciart','Timeless','Nfil3','Nr1d2','Bhlhe41','Dbp')
-
-selected_genes = tibble(genes = c(gly_enz,lipid_met,circ_rhy),
-                        order = 1:28)
-
-joined_wat_gene_results <-
-  joined_wat_gene_results %>% 
-  mutate(Category = ifelse(
-    target_id %in% gly_enz,
-    'Glycolytic enzymes and regulators',
-    ifelse(
-      target_id %in% lipid_met,
-      'Lipid metabolism',
-      ifelse(target_id %in% circ_rhy,
-             'Circadian rhythm',
-             NA)
-    ))) %>%
-  mutate(Category = factor(Category, 
-                           levels = c('Glycolytic enzymes and regulators',
-                                      'Lipid metabolism',
-                                      'Circadian rhythm')))
-
-joined_wat_gene_results %>% filter(!is.na(Direction)) %>%
-ggplot(., 
-       aes(x = log2(fc), 
-           y = -log10(lrt_qval))) + 
-  geom_point(alpha = 0.25, 
-             stroke = 0,
-             data = filter(joined_wat_gene_results, 
-                           !is.na(Direction), 
-                           is.na(Category))) +
-  geom_point(alpha = 1, 
-             size = 2, 
-             stroke = 0, 
-             data = filter(joined_wat_gene_results, 
-                           lrt_qval < 0.05, 
-                           !is.na(Category)),
-             aes(color = Category)) +
-  geom_hline(yintercept = -log10(0.05), 
-             color = 'red', 
-             linetype = 'dashed') + 
-  geom_label_repel(data = filter(joined_wat_gene_results, 
-                                !is.na(Category),
-                                lrt_qval < 0.05),
-                    aes(label = target_id, 
-                        color = Category), 
-                  size = 2, 
-                  force = 20) +
-  xlim(-7,7) +
-  #scale_color_manual(values = c('#4393c3','#878787','#d6604d')) +
-  xlab('log2(fold change)') + 
-    ylab('-log10(qValue)') +
-    ggtitle('WAT Cort Pellet vs Placebo Pellet - Gene level') +
-    theme_bw() + 
-    theme(text = element_text(size=10),
-          legend.position="bottom")
-
-```
-
-Volcano plot of deferentially expressed genes between cort vs placebo pellet WAT. Genes from Stefan's figure 6D are highlighted here.
 
 ### BAT
-
-#### Transcript level
 
 ```{r fig.height=6, fig.width=6}
 ########################
@@ -807,75 +812,6 @@ ggplot(filter(joined_bat_results, !is.na(Direction)),
 
 Volcano plot of differentially expressed transcripts between cort vs placebo pellet BAT. Genes from Stefan's figure 6D are highlighted here.
 
-#### Gene Level
-
-```{r fig.height=6, fig.width=6}
-##################
-# BAT Gene level #
-##################
-gly_enz <- c('Pfkl', 'Aldoa', 'Tpi1', 'Gapdh', 'Pgam1', 'Pkm', 'Pdha1', 'Dlat', 'Pdk4')
-lipid_met <- c('Acaca', 'Fasn', 'Scd1', 'Scd2', 'Lpgat1', 'Acadm', 'Pnpla2', 'Lep', 'Hsd11b1', 'Cd36')
-circ_rhy <- c('Clock', 'Arntl','Per3','Ciart','Timeless','Nfil3','Nr1d2','Bhlhe41','Dbp')
-
-selected_genes = tibble(genes = c(gly_enz,lipid_met,circ_rhy),
-                        order = 1:28)
-
-joined_bat_gene_results <-
-  joined_bat_gene_results %>% 
-  mutate(Category = ifelse(
-    target_id %in% gly_enz,
-    'Glycolytic enzymes and regulators',
-    ifelse(
-      target_id %in% lipid_met,
-      'Lipid metabolism',
-      ifelse(target_id %in% circ_rhy,
-             'Circadian rhythm',
-             NA)
-    ))) %>%
-  mutate(Category = factor(Category, 
-                           levels = c('Glycolytic enzymes and regulators',
-                                      'Lipid metabolism',
-                                      'Circadian rhythm')))
-
-joined_bat_gene_results %>% filter(!is.na(Direction)) %>%
-ggplot(., 
-       aes(x = log2(fc), 
-           y = -log10(lrt_qval))) + 
-  geom_point(alpha = 0.25, 
-             stroke = 0,
-             data = filter(joined_bat_gene_results, 
-                           !is.na(Direction), 
-                           is.na(Category))) +
-  geom_point(alpha = 1, 
-             size = 2, 
-             stroke = 0, 
-             data = filter(joined_bat_gene_results, 
-                           lrt_qval < 0.05, 
-                           !is.na(Category)),
-             aes(color = Category)) +
-  geom_hline(yintercept = -log10(0.05), 
-             color = 'red', 
-             linetype = 'dashed') + 
-  geom_label_repel(data = filter(joined_bat_gene_results, 
-                                !is.na(Category),
-                                lrt_qval < 0.05),
-                    aes(label = target_id, 
-                        color = Category), 
-                  size = 2, 
-                  force = 20) +
-  xlim(-7,7) +
-  #scale_color_manual(values = c('#4393c3','#878787','#d6604d')) +
-  xlab('log2(fold change)') + 
-    ylab('-log10(qValue)') +
-    ggtitle('BAT Cort Pellet vs Placebo Pellet - Gene level') +
-    theme_bw() + 
-    theme(text = element_text(size=10),
-          legend.position="bottom")
-```
-
-Volcano plot of differentially expressed transcripts between cort vs placebo pellet BAT. Genes from Stefan's figure 6D are highlighted here.
-
-In all of these plots, the genes that Stefan highlighted figure 6D shown on the plot. We can include other options, or include this later and color genes based on interesting GO terms. Lots of options here. The genes that were highlighted in the BAT analysis in the manuscript are no longer significant except for one, but I don't think this should be much of an issue since these genes are not expanded upon in the manuscript as far as I can tell. There are 4 volcano plots here two for WAT and two for BAT, with transcript level differential expression analysis and combined gene level analysis
 
 ## Bar plots of select genes (Figure 6D)
 
@@ -916,7 +852,30 @@ joined_wat_results %>% filter(!is.na(Category), lrt_qval < 0.05) %>%
 # WAT Genes #
 #############
 
-joined_wat_gene_results %>% filter(!is.na(Category), lrt_qval < 0.05) %>%
+gly_enz <- c('Pfkl', 'Aldoa', 'Tpi1', 'Gapdh', 'Pgam1', 'Pkm', 'Pdha1', 'Dlat', 'Pdk4')
+lipid_met <- c('Acaca', 'Fasn', 'Scd1', 'Scd2', 'Lpgat1', 'Acadm', 'Pnpla2', 'Lep', 'Hsd11b1', 'Cd36')
+circ_rhy <- c('Clock', 'Arntl','Per3','Ciart','Timeless','Nfil3','Nr1d2','Bhlhe41','Dbp')
+selected_genes = tibble(genes = c(gly_enz,lipid_met,circ_rhy),
+                        order = 1:28)
+joined_wat_gene_results <-
+  joined_wat_gene_results %>% 
+  mutate(Category = ifelse(
+    target_id %in% gly_enz,
+    'Glycolytic enzymes and regulators',
+    ifelse(
+      target_id %in% lipid_met,
+      'Lipid metabolism',
+      ifelse(target_id %in% circ_rhy,
+             'Circadian rhythm',
+             NA)
+    ))) %>%
+  mutate(Category = factor(Category, 
+                           levels = c('Glycolytic enzymes and regulators',
+                                      'Lipid metabolism',
+                                      'Circadian rhythm')))
+
+joined_wat_gene_results %>% 
+  filter(!is.na(Category), lrt_qval < 0.05) %>%
   mutate(target_id = factor(target_id, levels = c(gly_enz,lipid_met,circ_rhy)),
          Category = factor(Category, 
                            levels = c('Glycolytic enzymes and regulators',
@@ -971,6 +930,28 @@ joined_bat_results %>% filter(!is.na(Category), lrt_qval < 0.05) %>%
 ############
 # BAT Gene #
 ############
+gly_enz <- c('Pfkl', 'Aldoa', 'Tpi1', 'Gapdh', 'Pgam1', 'Pkm', 'Pdha1', 'Dlat', 'Pdk4')
+lipid_met <- c('Acaca', 'Fasn', 'Scd1', 'Scd2', 'Lpgat1', 'Acadm', 'Pnpla2', 'Lep', 'Hsd11b1', 'Cd36')
+circ_rhy <- c('Clock', 'Arntl','Per3','Ciart','Timeless','Nfil3','Nr1d2','Bhlhe41','Dbp')
+selected_genes = tibble(genes = c(gly_enz,lipid_met,circ_rhy),
+                        order = 1:28)
+joined_bat_gene_results <-
+  joined_bat_gene_results %>% 
+  mutate(Category = ifelse(
+    target_id %in% gly_enz,
+    'Glycolytic enzymes and regulators',
+    ifelse(
+      target_id %in% lipid_met,
+      'Lipid metabolism',
+      ifelse(target_id %in% circ_rhy,
+             'Circadian rhythm',
+             NA)
+    ))) %>%
+  mutate(Category = factor(Category, 
+                           levels = c('Glycolytic enzymes and regulators',
+                                      'Lipid metabolism',
+                                      'Circadian rhythm')))
+
 
 joined_bat_gene_results %>% filter(!is.na(Category), lrt_qval < 0.05) %>%
   mutate(target_id = factor(target_id, levels = c(gly_enz,lipid_met,circ_rhy)),
@@ -995,7 +976,7 @@ Here the genes that Stefan highlighted in his WAT plot are shown. The WAT genes 
 
 ### WAT GO Term analysis
 
-```{r fig.width=7, fig.height=6}
+```{r fig.height=10, fig.width=7}
 ########################
 # WAT GO Term analysis #
 ########################
@@ -1033,16 +1014,15 @@ zScore <- function(x, subsetFC, universe){
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScore(geneID, subsetFC, universe))
 
-ggplot(filter(goDF, ONTOLOGY == 'BP'), 
+ggplot(goDF, 
        aes(x = zscore, 
            y = -log10(p.adjust), 
            size = Count)) + 
   geom_point(alpha= 0.25) + 
   facet_wrap(~ONTOLOGY, 
              scales = 'free', 
-             nrow = 1) +
-  geom_text_repel(data = filter(goDF, rank <= 20, 
-                                ONTOLOGY == 'BP'),
+             ncol = 1) +
+  geom_text_repel(data = filter(goDF, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
@@ -1053,7 +1033,7 @@ ggplot(filter(goDF, ONTOLOGY == 'BP'),
 
 ### BAT GO Term analysis
 
-```{r fig.width=7, fig.height=6}
+```{r fig.height=10, fig.width=7}
 ########################
 # BAT GO Term analysis #
 ########################
@@ -1091,16 +1071,15 @@ zScore <- function(x, subsetFC, universe){
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScore(geneID, subsetFC, universe))
 
-ggplot(filter(goDF, ONTOLOGY == 'BP'), 
+ggplot(goDF, 
        aes(x = zscore, 
            y = -log10(p.adjust), 
            size = Count)) + 
   geom_point(alpha= 0.25) + 
   facet_wrap(~ONTOLOGY, 
              scales = 'free', 
-             nrow = 1) +
-  geom_text_repel(data = filter(goDF, rank <= 20, 
-                                ONTOLOGY == 'BP'),
+             ncol = 1) +
+  geom_text_repel(data = filter(goDF, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
@@ -1205,13 +1184,15 @@ subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene.x)
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
 
-ggplot(goDF, aes(x = zscore, y = -log10(p.adjust))) + geom_point(aes(size = Count), alpha = 0.25) + 
+ggplot(goDF, aes(x = zscore, y = -log10(p.adjust))) + 
+  geom_point(aes(size = Count), alpha = 0.25) + 
   facet_wrap(~ONTOLOGY, ncol = 1, scales = 'free_y') +
   geom_text_repel(data = filter(goDF, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
-                  force = 10)
+                  force = 10) +
+  theme_bw()
 
 ```
 
@@ -1249,13 +1230,15 @@ subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene.x)
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
 
-ggplot(goDF, aes(x = zscore, y = -log10(p.adjust))) + geom_point(aes(size = Count), alpha = 0.25) + 
+ggplot(goDF, aes(x = zscore, y = -log10(p.adjust))) + 
+  geom_point(aes(size = Count), alpha = 0.25) + 
   facet_wrap(~ONTOLOGY, ncol = 1, scales = 'free') +
   geom_text_repel(data = filter(goDF, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
-                  force = 10)
+                  force = 10) +
+  theme_bw()
 ```
 
 This is a GO term analysis of the genes that are negatively correlated between WAT and BAT. Here the zscore described above is used again. There is a clear trend that mitochondrial genes are being effected in WAT and BAT differently by cort treatment. It would appear that in WAT these genes are increased in abundance and in BAT the are decreased in abundance.
@@ -1269,18 +1252,22 @@ This is a GO term analysis of the genes that are negatively correlated between W
 # Export data for oPOSSUM analysis
 joined_wat_results %>% filter(lrt_qval < 0.05, fc < 1) %>% 
   filter(!duplicated(ens_gene)) %>% 
-  write_csv('~/Downloads/down_regulated_wat.csv')
+  write_csv('../data/down_regulated_wat.csv')
 
 joined_wat_results %>% filter(lrt_qval < 0.05, fc > 1) %>% 
   filter(!duplicated(ens_gene)) %>% 
-  write_csv('~/Downloads/up_regulated_wat.csv')
+  write_csv('../data/up_regulated_wat.csv')
 
+joined_wat_results %>% 
+  filter(!duplicated(ens_gene)) %>% 
+  write_csv('../data/all_wat.csv')
+  
 # Load in oPOSSUM results
-tf_up <- read_xlsx('~/Documents/GitHub/ShinyApps/InVivoRNAseq/tf_motifs_up_regulated_wat.xlsx') %>% dplyr::select(TF, `Z-score`) %>%
-  dplyr::rename(zscore_up = `Z-score`)
-
-tf_down <- read_xlsx('~/Documents/GitHub/ShinyApps/InVivoRNAseq/tf_motifs_down_regulated_wat.xlsx') %>% dplyr::select(TF, `Z-score`) %>%
+tf_down <- read_tsv('../data/opossum_wat_down.txt') %>% dplyr::select(TF, `Z-score`) %>%
   dplyr::rename(zscore_down = `Z-score`)
+
+tf_up <- read_tsv('../data/opossum_wat_up.txt') %>% dplyr::select(TF, `Z-score`) %>%
+  dplyr::rename(zscore_up = `Z-score`)
 
 tf_all <- full_join(tf_up, tf_down, by = 'TF') %>% mutate(TF = toupper(TF))
 
@@ -1325,45 +1312,47 @@ One thing that puzzled me at first was the up regulation of two TFs in the upper
 # BAT Analysis #
 ################
 
-# # Export data for oPOSSUM analysis
-# joined_bat_results %>% filter(lrt_qval < 0.05, fc < 1) %>% 
-#   filter(!duplicated(ens_gene)) %>% 
-#   write_csv('~/Downloads/down_regulated_bat.csv')
-# 
-# joined_bat_results %>% filter(lrt_qval < 0.05, fc > 1) %>% 
-#   filter(!duplicated(ens_gene)) %>% 
-#   write_csv('~/Downloads/up_regulated_bat.csv')
-# 
-# # Load in oPOSSUM results
-# tf_up <- read_xlsx('~/Documents/GitHub/ShinyApps/InVivoRNAseq/tf_motifs_up_regulated_bat.xlsx') %>% 
-#   dplyr::select(TF, `Z-score`) %>%
-#   dplyr::rename(zscore_up = `Z-score`)
-# 
-# tf_down <- read_xlsx('~/Documents/GitHub/ShinyApps/InVivoRNAseq/tf_motifs_down_regulated_bat.xlsx') %>% 
-#   dplyr::select(TF, `Z-score`) %>%
-#   dplyr::rename(zscore_down = `Z-score`)
-# 
-# tf_all <- full_join(tf_up, tf_down, by = 'TF') %>% mutate(TF = toupper(TF))
-# 
-# tf_all <- joined_wat_results %>% dplyr::select(ext_gene, fc, lrt_qval) %>%
-#   dplyr::rename(TF = ext_gene) %>%
-#   mutate(direction = ifelse(lrt_qval < 0.05 & fc > 1,
-#                             'Up',
-#                             ifelse(lrt_qval < 0.05 & fc < 1,
-#                                    'Down',
-#                                    NA)),
-#          TF = toupper(TF)) %>%
-#   filter(!is.na(direction)) %>%
-#   right_join(tf_all, 'TF') %>% filter(!duplicated(TF))
-# 
-# ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) + 
-#   geom_vline(xintercept = 0, alpha = 0.5) + geom_hline(yintercept = 0, alpha = 0.5) + 
-#   geom_point(size = 4, alpha = 0.5, stroke = 0) + 
-#   geom_text_repel(data = filter(tf_all, zscore_up > 10, zscore_down < -5),
-#                     aes(label = TF, color = direction), size = 3, force = 10) +
-#   geom_text_repel(data = filter(tf_all, zscore_down > 10, zscore_up < -5),
-#                     aes(label = TF, color = direction), size = 3, force = 10) +
-#   theme_bw()
+# Export data for oPOSSUM analysis
+joined_bat_results %>% filter(lrt_qval < 0.05, fc < 1) %>%
+  filter(!duplicated(ens_gene)) %>%
+  write_csv('../data/down_regulated_bat.csv')
+
+joined_bat_results %>% filter(lrt_qval < 0.05, fc > 1) %>%
+  filter(!duplicated(ens_gene)) %>%
+  write_csv('../data/up_regulated_bat.csv')
+
+joined_bat_results %>% 
+  filter(!duplicated(ens_gene)) %>%
+  write_csv('../data/all_bat.csv')
+
+# Load in oPOSSUM results
+tf_down <- read_tsv('../data/opossum_bat_down.txt') %>%
+  dplyr::select(TF, `Z-score`) %>%
+  dplyr::rename(zscore_down = `Z-score`)
+
+tf_up <- read_tsv('../data/opossum_bat_up.txt') %>%
+  dplyr::select(TF, `Z-score`) %>%
+  dplyr::rename(zscore_up = `Z-score`)
+
+tf_all <- full_join(tf_up, tf_down, by = 'TF') %>% mutate(TF = toupper(TF))
+
+tf_all <- joined_bat_results %>% dplyr::select(ext_gene, fc, lrt_qval) %>%
+  dplyr::rename(TF = ext_gene) %>%
+  mutate(direction = ifelse(lrt_qval < 0.05 & fc > 1,
+                            'Up',
+                            ifelse(lrt_qval < 0.05 & fc < 1,
+                                   'Down',
+                                   NA)),
+         TF = toupper(TF)) %>%
+  filter(!is.na(direction)) %>%
+  right_join(tf_all, 'TF') %>% filter(!duplicated(TF))
+
+ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) +
+  geom_vline(xintercept = 0, alpha = 0.5) + geom_hline(yintercept = 0, alpha = 0.25) +
+  geom_point(size = 4, alpha = 0.5, stroke = 0) +
+  geom_text_repel(data = filter(tf_all, !is.na(direction)),
+                    aes(label = TF, color = direction), size = 3, force = 20) +
+  theme_bw()
 ```
 
 
