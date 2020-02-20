@@ -10,6 +10,7 @@ output:
         number_sections: yes
         toc: yes
         toc_depth: 4
+        toc_float: yes
         code_folding: hide
   
 ---
@@ -1307,7 +1308,8 @@ I also colored the TFs red if they were down regulated themselves in the data se
 
 One thing that puzzled me at first was the up regulation of two TFs in the upper left quadrant, since EBF1 and ZFP423 are typically associated with increased expression of their targets and this quadrant represents the motifs for the down regulated genes. I found though that EBF1 and ZFP423 together act as transcriptional repressors, and their increased abundance together could be repressing genes in WAT after Cort treatment.
 
-```{r}
+## TF Motifs BAT up vs down regulated genes
+```{r fig.height=6, fig.width=6}
 ################
 # BAT Analysis #
 ################
@@ -1352,7 +1354,8 @@ ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) +
   geom_point(size = 4, alpha = 0.5, stroke = 0) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
                     aes(label = TF, color = direction), size = 3, force = 20) +
-  theme_bw()
+  theme_bw() + theme(legend.position = 'bottom') +
+  xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment')
 ```
 
 
