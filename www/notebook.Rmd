@@ -10,7 +10,7 @@ output:
         number_sections: yes
         toc: yes
         toc_depth: 4
-        toc_float: yes
+        toc_float: no
         code_folding: hide
   
 ---
@@ -38,6 +38,7 @@ library(eulerr)
 library(ggrepel)
 library(clusterProfiler)
 library(org.Mm.eg.db)
+library(RcisTarget)
 ```
 
 
@@ -1098,11 +1099,29 @@ Not much for me to say here, we can take a closer look at this and decide how be
 ############################
 # Up regulated transcripts #
 ############################
+all_combined <- full_join(
+  dplyr::select(
+    joined_bat_results,
+    -b,
+    -wt_qval,
+    -Category),
+  dplyr::select(
+    joined_wat_results,
+    -ens_gene,
+    -ext_gene,
+    -external_transcript_name,
+    -b,
+    -wt_qval,
+    -Category
+  ),
+  by = "target_id",
+  suffix = c("_bat", "_wat")
+)
 
-all_combined <- full_join(joined_bat_results, joined_wat_results, by = 'target_id')
+saveRDS(all_combined, file = "../data/all_combined.RDS")
 
-up = cbind(all_combined$lrt_qval.x < 0.05 & all_combined$fc.x > 1,
-          all_combined$lrt_qval.y < 0.05 & all_combined$fc.y > 1)
+up = cbind(all_combined$lrt_qval_bat < 0.05 & all_combined$fc_bat > 1,
+          all_combined$lrt_qval_wat < 0.05 & all_combined$fc_wat > 1)
 colnames(up) = c('BAT','WAT')
 up[is.na(up)] = FALSE
 
@@ -1116,8 +1135,8 @@ plot(euler(up, shape = "ellipse"), quantities = TRUE, main = 'Up regulated trans
 # Down regulated transcripts #
 ##############################
 
-down = cbind(all_combined$lrt_qval.x < 0.05 & all_combined$fc.x < 1,
-          all_combined$lrt_qval.y < 0.05 & all_combined$fc.y < 1)
+down = cbind(all_combined$lrt_qval_bat < 0.05 & all_combined$fc_bat < 1,
+          all_combined$lrt_qval_wat < 0.05 & all_combined$fc_wat < 1)
 colnames(down) = c('BAT','WAT')
 down[is.na(down)] = FALSE
 
@@ -1131,11 +1150,11 @@ plot(euler(down, shape = "ellipse"), quantities = TRUE, main = 'Down regulated t
 # Pairwise Plots #
 ##################
 
-all_combined %>% mutate(comb_hit = lrt_qval.x < 0.05 & lrt_qval.y < 0.05) %>%
+all_combined %>% mutate(comb_hit = lrt_qval_bat < 0.05 & lrt_qval_wat < 0.05) %>%
   filter(comb_hit) %>%
   ggplot(.,
-       aes(x= log2(fc.x),
-           y = log2(fc.y))) +
+       aes(x= log2(fc_bat),
+           y = log2(fc_wat))) +
   geom_point(alpha= 0.5, stroke = 0) + geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
   theme_bw() + xlab('BAT log2 Fold Change') + ylab('WAT log2 Fold Change')
 ```
@@ -1147,18 +1166,18 @@ This pairwise plot shows the significant agreement between the up and down regul
 # GO Term enrichment for on diagonal overlap #
 ##############################################
 
-on_diag <- all_combined %>% mutate(comb_hit = lrt_qval.x < 0.05 & 
-                         lrt_qval.y < 0.05 &
-                         log2(fc.x)/log2(fc.y) > 0) %>%
+on_diag <- all_combined %>% mutate(comb_hit = lrt_qval_bat < 0.05 & 
+                         lrt_qval_wat < 0.05 &
+                         log2(fc_bat)/log2(fc_wat) > 0) %>%
   filter(comb_hit)
 
-gene.df <- clusterProfiler::bitr(on_diag$ext_gene.x, 
+gene.df <- clusterProfiler::bitr(on_diag$ext_gene_bat, 
                                  fromType = 'SYMBOL', 
                                  toType = 'ENTREZID', 
                                  OrgDb = org.Mm.eg.db)
 
     
-universe <- clusterProfiler::bitr(all_combined$ext_gene.x, 
+universe <- clusterProfiler::bitr(all_combined$ext_gene_bat, 
                                   fromType = 'SYMBOL', 
                                   toType = 'ENTREZID', 
                                   OrgDb = org.Mm.eg.db)
@@ -1177,10 +1196,10 @@ zScoreDiag <- function(x, subsetFC, universe){
   
   subsetFC <- subsetFC %>% dplyr::filter(GeneName %in% convert)
   #return(subsetFC)
-  return((sum(subsetFC$fc.x < subsetFC$fc.y, na.rm = T) - sum(subsetFC$fc.x > subsetFC$fc.y, na.rm = T)) / sqrt(ncol(subsetFC)))
+  return((sum(subsetFC$fc_bat < subsetFC$fc_wat, na.rm = T) - sum(subsetFC$fc_bat > subsetFC$fc_wat, na.rm = T)) / sqrt(ncol(subsetFC)))
 }
 
-subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene.x)
+subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene_bat)
 
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
@@ -1204,18 +1223,18 @@ This is a GO term analysis of the genes that are positively correlated between W
 # GO Term enrichment for off diagonal overlap #
 ###############################################
 
-off_diag <- all_combined %>% mutate(comb_hit = lrt_qval.x < 0.05 & 
-                         lrt_qval.y < 0.05 &
-                         log2(fc.x)/log2(fc.y) < 0) %>%
+off_diag <- all_combined %>% mutate(comb_hit = lrt_qval_bat < 0.05 & 
+                         lrt_qval_wat < 0.05 &
+                         log2(fc_bat)/log2(fc_wat) < 0) %>%
   filter(comb_hit)
 
-gene.df <- clusterProfiler::bitr(off_diag$ext_gene.x, 
+gene.df <- clusterProfiler::bitr(off_diag$ext_gene_bat, 
                                  fromType = 'SYMBOL', 
                                  toType = 'ENTREZID', 
                                  OrgDb = org.Mm.eg.db)
 
     
-universe <- clusterProfiler::bitr(all_combined$ext_gene.x, 
+universe <- clusterProfiler::bitr(all_combined$ext_gene_bat, 
                                   fromType = 'SYMBOL', 
                                   toType = 'ENTREZID', 
                                   OrgDb = org.Mm.eg.db)
@@ -1226,7 +1245,7 @@ goDF <- clusterProfiler::enrichGO(gene = gene.df$ENTREZID,
                                   ont = 'ALL', 
                                   OrgDb = org.Mm.eg.db)
 
-subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene.x)
+subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene_bat)
 
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
@@ -1359,8 +1378,302 @@ ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) +
 ```
 
 
+## RcisTarget Analysis
+
+### Download Motif-to-TF annotations
+```{r eval=FALSE, include=TRUE}
+featherURL <- "https://resources.aertslab.org/cistarget/databases/mus_musculus/mm10/refseq_r80/mc9nr/gene_based/mm10__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather" 
+download.file(featherURL, destfile=basename(featherURL))
+```
+
+### Run RcisTarget
+```{r}
+geneLists <- list(wat_up = unique(read_csv('../data/up_regulated_wat.csv')$ext_gene))
+
+# Search space: 1k bp around TSS
+motifRankings <- importRankings("mm10__refseq-r80__500bp_up_and_100bp_down_tss.mc9nr.feather")
+# Load the annotation to transcription factors
+data(motifAnnotations_mgi)
+
+motifEnrichmentTable_wGenes <- cisTarget(geneLists, 
+         motifRankings,
+         motifAnnot=motifAnnotations_mgi,
+         nCores = 10)
+
+cd36 <- grep("Cd36",motifEnrichmentTable_wGenes$enrichedGenes)
+cd36_tfs <- motifEnrichmentTable_wGenes$TF_highConf[cd36]
+cd36_tfs <- gsub("inferredBy_Orthology","",as.vector(cd36_tfs))
+cd36_tfs <- gsub("directAnnotation","",cd36_tfs)
+cd36_tfs <- gsub("[(). ]","",cd36_tfs)
+cd36_tfs <- strsplit(cd36_tfs, split = ";") %>% unlist() %>% unique()
+
+motifs_AUC <- calcAUC(geneLists, motifRankings, nCores=10)
+
+auc <- getAUC(motifs_AUC)["wat_up",]
+hist(auc, main="wat_up", xlab="AUC histogram",
+     breaks=100, col="#ff000050", border="darkred")
+nes3 <- (3*sd(auc)) + mean(auc)
+abline(v=nes3, col="red")
+
+
+motifEnrichmentTable <- addMotifAnnotation(motifs_AUC, nesThreshold=3,
+     motifAnnot=motifAnnotations_mgi)
+
+motifEnrichmentTable[,-"TF_lowConf",]
+```
+
+```{r}
+ggplot(filter(joined_wat_results, !is.na(Direction)), 
+       aes(x = log2(fc), 
+           y = -log10(lrt_qval))) + 
+  geom_point(alpha = 0.25, 
+             stroke = 0,
+             data = filter(joined_wat_results, 
+                           !is.na(Direction))) +
+  geom_point(alpha = 1, 
+             size = 2, 
+             stroke = 0, 
+             data = filter(joined_wat_results,
+                           ext_gene %in% cd36_tfs,
+                           lrt_qval < 0.05)) +
+  geom_hline(yintercept = -log10(0.05), 
+             color = 'red', 
+             linetype = 'dashed') + 
+  geom_label_repel(data = filter(joined_wat_results,
+                                 ext_gene %in% cd36_tfs,
+                                lrt_qval < 0.05),
+                    aes(label = external_transcript_name), 
+                  size = 2, 
+                  force = 20) +
+  xlim(-7,7) +
+  #scale_color_manual(values = c('#4393c3','#878787','#d6604d')) +
+  xlab('log2(fold change)') + 
+    ylab('-log10(qValue)') +
+    ggtitle('WAT Cort Pellet vs Placebo Pellet Transcripts') +
+    theme_bw() + 
+    theme(text = element_text(size=10),
+          legend.position="bottom")
+
+elk4 <- grep("Elk4",motifEnrichmentTable_wGenes$TF_highConf)
+elk4_targets <- motifEnrichmentTable_wGenes$enrichedGenes[elk4] %>% strsplit(";") %>% unlist() %>% unique()
+
+ggplot(filter(joined_wat_results, !is.na(Direction)), 
+       aes(x = log2(fc), 
+           y = -log10(lrt_qval))) + 
+  geom_point(alpha = 0.25, 
+             stroke = 0,
+             data = filter(joined_wat_results, 
+                           !is.na(Direction))) +
+  geom_point(alpha = 1, 
+             size = 2, 
+             stroke = 0, 
+             color = "orange",
+             data = filter(joined_wat_results,
+                           ext_gene %in% elk4_targets,
+                           lrt_qval < 0.05)) +
+  geom_hline(yintercept = -log10(0.05), 
+             color = 'red', 
+             linetype = 'dashed') + 
+  xlim(-7,7) +
+  #scale_color_manual(values = c('#4393c3','#878787','#d6604d')) +
+  xlab('log2(fold change)') + 
+    ylab('-log10(qValue)') +
+    ggtitle('WAT Cort Pellet vs Placebo Pellet Transcripts') +
+    theme_bw() + 
+    theme(text = element_text(size=10),
+          legend.position="bottom")
+
+
+
+joined_wat_results %>% filter(ext_gene %in% elk4_targets, fc > 2, lrt_qval < 0.05) %>% print(n = 500) %>%
+  ggplot(., aes(y = -log10(lrt_qval), x = log2(fc))) +
+  geom_point(aes(color = ext_gene == "Cd36"))
+
+joined_wat_results %>% filter(ext_gene %in% elk4_targets, fc > 2, lrt_qval < 0.05) %>% print(n = 500) %>% write_csv("../ELK4_up_targets.csv")
+```
+
+## All TFs
+
+```{r}
+library(UpSetR)
+library(ComplexHeatmap)
+
+allTFs <- motifEnrichmentTable_wGenes$TF_highConf
+allTFs <- gsub("inferredBy_Orthology","",as.vector(allTFs))
+allTFs <- gsub("directAnnotation","",allTFs)
+allTFs <- gsub("[(). ]","",allTFs)
+allTFs <- strsplit(allTFs, split = ";") %>% unlist() %>% unique()
+allTFs <- allTFs[order(allTFs)]
+
+
+ggplot(filter(joined_wat_results, !is.na(Direction)), 
+       aes(x = log2(fc), 
+           y = -log10(lrt_qval))) + 
+  geom_point(alpha = 0.25, 
+             stroke = 0,
+             data = filter(joined_wat_results, 
+                           !is.na(Direction))) +
+  geom_point(alpha = 1, 
+             size = 2, 
+             stroke = 0,
+             color = "orange",
+             data = filter(joined_wat_results,
+                           ext_gene %in% allTFs,
+                           lrt_qval < 0.05)) +
+  geom_hline(yintercept = -log10(0.05), 
+             color = 'red', 
+             linetype = 'dashed') + 
+  geom_label_repel(data = filter(joined_wat_results,
+                                 ext_gene %in% allTFs,
+                                lrt_qval < 0.05),
+                    aes(label = external_transcript_name), 
+                  size = 2, 
+                  force = 20) +
+  xlim(-7,7) +
+  #scale_color_manual(values = c('#4393c3','#878787','#d6604d')) +
+  xlab('log2(fold change)') + 
+    ylab('-log10(qValue)') +
+    ggtitle('WAT Cort Pellet vs Placebo Pellet Transcripts') +
+    theme_bw() + 
+    theme(text = element_text(size=10),
+          legend.position="bottom")
+
+#allTFs <- filter(joined_wat_results, lrt_qval < 0.05, ext_gene %in% allTFs)$ext_gene %>% unique()
+allTFs <- joined_wat_results %>% 
+  filter(lrt_qval < 0.05, ext_gene %in% allTFs) %>% 
+  arrange(-abs(log2(fc))) %>% 
+  filter(!duplicated(ext_gene)) %>% 
+  pull(ext_gene)
+
+lt <- list()
+for(i in 1:5){
+  tf <- allTFs[i]
+  genes <- grep(tf,motifEnrichmentTable_wGenes$TF_highConf)
+  genes <- motifEnrichmentTable_wGenes$enrichedGenes[genes] %>% strsplit(";") %>% unlist() %>% unique()
+  genes <- joined_wat_results %>% 
+    filter(lrt_qval < 0.05, fc > 2, ext_gene %in% genes) %>% 
+    pull(ext_gene) %>% unique()
+  lt[[tf]] = genes
+}
+summary(lt)
+lt_mat2 <- list_to_matrix(lt)
+lt_mat2["Cd36",]
+lt_mat <- make_comb_mat(lt, mode = "intersect")
+lt_mat3 <- lt_mat[comb_degree(lt_mat) == 2]
+comb_size(lt_mat3)
+
+UpSet(lt_mat3, comb_order = order(comb_size(lt_mat3)))
+
+gabp1_ets1 <- extract_comb(lt_mat3, comb_name = "00101")
+
+joined_wat_results %>% filter(ext_gene %in% gabp1_ets1,
+                              fc > 2,
+                              lrt_qval < 0.05) %>%
+ggplot(., 
+         aes(y = -log10(lrt_qval), 
+             x = log2(fc), 
+             color = ext_gene == "Cd36")) + 
+  geom_point() +
+  theme_bw()
+
+
+```
+
+## TF Analysis for vWAT + BAT up-regulated genes
+
+```{r}
+geneLists <- list(wat_bat_up = all_combined %>% 
+                    filter(fc_bat > 1, 
+                           fc_wat > 1, 
+                           lrt_qval_bat < 0.05, 
+                           lrt_qval_wat < 0.05) %>%
+                    pull(ext_gene) %>% unique())
+
+motifEnrichmentTable_wGenes <- cisTarget(geneLists, 
+         motifRankings,
+         motifAnnot=motifAnnotations_mgi,
+         nCores = 10)
+
+
+
+
+
+allTFs <- motifEnrichmentTable_wGenes$TF_highConf
+allTFs <- gsub("inferredBy_Orthology","",as.vector(allTFs))
+allTFs <- gsub("directAnnotation","",allTFs)
+allTFs <- gsub("[(). ]","",allTFs)
+allTFs <- strsplit(allTFs, split = ";") %>% unlist() %>% unique()
+allTFs <- allTFs[order(allTFs)]
+
+
+ggplot(filter(all_combined, lrt_qval_wat < 0.05, lrt_qval_bat < 0.05), 
+       aes(x = log2(fc_wat), 
+           y = log2(fc_bat))) + 
+  geom_point(alpha = 0.25, 
+             stroke = 0) +
+  geom_vline(xintercept = 0) +
+  geom_hline(yintercept = 0) +
+  geom_label_repel(data = filter(all_combined,
+                                 ext_gene %in% allTFs,
+                                lrt_qval_wat < 0.05,
+                                lrt_qval_bat < 0.05),
+                    aes(label = ext_gene), 
+                  size = 2, 
+                  force = 20) +
+  xlim(-7,7) +
+    theme_bw()
+
+#allTFs <- filter(joined_wat_results, lrt_qval < 0.05, ext_gene %in% allTFs)$ext_gene %>% unique()
+allTFs <- all_combined %>% 
+  filter(lrt_qval_bat < 0.05, 
+         lrt_qval_wat < 0.05,
+         ext_gene %in% allTFs) %>% 
+  rowwise() %>%
+  mutate(comb_fc = abs(sum(log2(fc_wat),log2(fc_bat)))) %>%
+  arrange(-comb_fc) %>% 
+  filter(!duplicated(ext_gene)) %>% 
+  pull(ext_gene)
+
+lt <- list()
+for(i in 1:5){
+  tf <- allTFs[i]
+  genes <- grep(tf,motifEnrichmentTable_wGenes$TF_highConf)
+  genes <- motifEnrichmentTable_wGenes$enrichedGenes[genes] %>% strsplit(";") %>% unlist() %>% unique()
+  genes <- joined_wat_results %>% 
+    filter(lrt_qval < 0.05, fc > 2, ext_gene %in% genes) %>% 
+    pull(ext_gene) %>% unique()
+  lt[[tf]] = genes
+}
+summary(lt)
+lt_mat2 <- list_to_matrix(lt)
+lt_mat2["Cd36",]
+lt_mat <- make_comb_mat(lt, mode = "intersect")
+lt_mat3 <- lt_mat[comb_degree(lt_mat) <= 2]
+comb_size(lt_mat3)
+
+UpSet(lt_mat3, comb_order = order(comb_size(lt_mat3)))
+
+elk4 <- extract_comb(lt_mat3, comb_name = "00010")
+
+all_combined %>% filter(ext_gene %in% gabp1_ets1,
+                        fc > 2,
+                        lrt_qval < 0.05) %>%
+  ggplot(., 
+         aes(y = -log10(lrt_qval), 
+             x = log2(fc), 
+             color = ext_gene == "Cd36")) + 
+  geom_point() +
+  theme_bw()
+```
+
 
 # Conclusions and next steps
 
 * I still need to do the oPOSSUM analysis for the BAT tissue, and would also like to use another program called Pscan that does the same thing to see how well they agree with one another.
 * Let me know what other plots or analysis you think we need and which ones you would like to include for sure and I will finalize those plots and put them into the figures.
+
+
+```{r sessioninfo, echo = FALSE, eval = TRUE}
+# set eval = FALSE if you don't want this info (useful for reproducibility) to appear 
+sessionInfo()
+```
