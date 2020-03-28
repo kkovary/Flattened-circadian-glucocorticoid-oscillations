@@ -39,6 +39,7 @@ library(ggrepel)
 library(clusterProfiler)
 library(org.Mm.eg.db)
 library(RcisTarget)
+library(patchwork)
 ```
 
 
@@ -56,7 +57,7 @@ This code takes in the experimental details (treatment, lane, tissue, etc.) whic
 wat_sample_list = read_xlsx(
   '/Users/kylekovary/Box Sync/kkovary/R Projects/RNAseq/Stefan RNA-seq WAT analysis/Stefan Tholen_Samples_for_RNAseq_WAT.xlsx'
 ) %>%
-  dplyr::mutate(fat = 'WAT', lane = paste0(lane, '_WAT')) %>%
+  dplyr::mutate(fat = 'vWAT', lane = paste0(lane, '_vWAT')) %>%
   dplyr::rename(sample_name = `Sample Name`) %>%
   unite('sample_name', c(sample_name, fat)) %>%
   dplyr::select(lane, mouse, sample_name)
@@ -85,7 +86,7 @@ s2c_wat = bind_cols(wat_sample_list, path[match(wat_sample_list$mouse, path$mous
     into = c('condition', 'delivery', 'day', 'replicate', 'depot'),
     remove = F
   ) %>%
-  unite('treatment', c('condition', 'delivery'), remove = F) %>%
+  unite('treatment', c('condition', 'delivery'), sep = " ", remove = F) %>%
   dplyr::rename(sample = sample_name) %>%
   dplyr::filter(!mouse %in% c(211, 223, 229)) #%>%
 #unite('Treatment',c('Pellet','Delivery'), remove = F)
@@ -118,13 +119,13 @@ s2c_bat = bind_cols(bat_sample_list, path[match(bat_sample_list$mouse, path$mous
     into = c('condition', 'delivery', 'day', 'replicate', 'depot'),
     remove = F
   ) %>%
-  unite('treatment', c('condition', 'delivery'), remove = F) %>%
+  unite('treatment', c('condition', 'delivery'), sep = " ", remove = F) %>%
   dplyr::rename(sample = sample_name)
 
 s2c <- rbind(s2c_wat, s2c_bat)
 
-s2c_wat <- s2c %>% dplyr::filter(depot == 'WAT', treatment %in% c('Cort_pellet','Placebo_pellet'))
-s2c_bat<- s2c %>% dplyr::filter(depot == 'BAT', treatment %in% c('Cort_pellet','Placebo_pellet'))
+s2c_wat <- s2c %>% dplyr::filter(depot == 'vWAT', treatment %in% c('Cort pellet','Sham pellet'))
+s2c_bat<- s2c %>% dplyr::filter(depot == 'BAT', treatment %in% c('Cort pellet','Sham pellet'))
 ```
 
 ## Gene ID import
@@ -246,8 +247,8 @@ wt_results <- sleuth_results(so_wat,
 
 # Fold change / adjusted pval
 so_wat_ttest <- kallisto_table(so_wat) %>% dplyr::group_by(target_id) %>%
-  dplyr::summarise(fc = mean(est_counts[treatment == 'Cort_pellet'], na.rm = T) / 
-              mean(est_counts[treatment == 'Placebo_pellet'], na.rm = T))
+  dplyr::summarise(fc = mean(est_counts[treatment == 'Cort pellet'], na.rm = T) / 
+              mean(est_counts[treatment == 'Sham pellet'], na.rm = T))
 
 # Join 3 methods
 joined_wat_results <- dplyr::full_join(
@@ -315,8 +316,8 @@ so_wat_ttest <- kallisto_table(so_wat) %>%
   dplyr::mutate(transcript = target_id,
                 target_id = so_wat$target_mapping[match(target_id,so_wat$target_mapping$target_id),'ext_gene']) %>%
   dplyr::group_by(transcript, target_id) %>%
-  summarise(fc = mean((est_counts[treatment == 'Cort_pellet'] + 0.5), na.rm = T) / 
-              mean((est_counts[treatment == 'Placebo_pellet'] + 0.5), na.rm = T)) %>%
+  summarise(fc = mean((est_counts[treatment == 'Cort pellet'] + 0.5), na.rm = T) / 
+              mean((est_counts[treatment == 'Sham pellet'] + 0.5), na.rm = T)) %>%
   dplyr::group_by(target_id) %>%
   dplyr::summarise(fc = 2^sum(log2(fc), na.rm = TRUE))
 
@@ -382,8 +383,8 @@ table(lrt_results[, "lrt_qval"] < 0.05)
 
 # Fold change / adjusted pval
 so_bat_ttest <- kallisto_table(so_bat) %>% dplyr::group_by(target_id) %>%
-  dplyr::summarise(fc = mean(est_counts[treatment == 'Cort_pellet'], na.rm = T) / 
-              mean(est_counts[treatment == 'Placebo_pellet'], na.rm = T))
+  dplyr::summarise(fc = mean(est_counts[treatment == 'Cort pellet'], na.rm = T) / 
+              mean(est_counts[treatment == 'Sham pellet'], na.rm = T))
 
 # Join 3 methods
 joined_bat_results <- dplyr::full_join(
@@ -452,8 +453,8 @@ so_bat_ttest <- kallisto_table(so_bat) %>%
   dplyr::mutate(transcript = target_id,
                 target_id = so_bat$target_mapping[match(target_id,so_bat$target_mapping$target_id),'ext_gene']) %>%
   dplyr::group_by(transcript, target_id) %>%
-  summarise(fc = mean((est_counts[treatment == 'Cort_pellet'] + 0.5), na.rm = T) / 
-              mean((est_counts[treatment == 'Placebo_pellet'] + 0.5), na.rm = T)) %>%
+  summarise(fc = mean((est_counts[treatment == 'Cort pellet'] + 0.5), na.rm = T) / 
+              mean((est_counts[treatment == 'Sham pellet'] + 0.5), na.rm = T)) %>%
   dplyr::group_by(target_id) %>%
   dplyr::summarise(fc = 2^sum(log2(fc), na.rm = TRUE))
 
@@ -582,14 +583,14 @@ all_lrt <- readRDS('../data/all_lrt.RDS')
 all_lrt %>% group_by(depot, cond_1, cond_2) %>% summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
   ungroup() %>% mutate_all(~cell_spec(
         ., 
-        color = ifelse(. == 'Cort_pellet', "white", "black"),
-        background = ifelse(. == 'Cort_pellet', "#007BA7","transparent"))) %>%
+        color = ifelse(. == 'Cort pellet', "white", "black"),
+        background = ifelse(. == 'Cort pellet', "#007BA7","transparent"))) %>%
     kable(escape = F) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 
 all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
   summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
-  mutate(`Cort Pellet` = ifelse(cond_1  == 'Cort_pellet' | cond_2 == 'Cort_pellet','yes','no'))%>%
+  mutate(`Cort Pellet` = ifelse(cond_1  == 'Cort pellet' | cond_2 == 'Cort pellet','yes','no'))%>%
   ungroup() %>%
   ggplot(., 
          aes(x = fct_reorder(comp, num_sig), 
@@ -652,7 +653,7 @@ so_pca(so_wat, joined_wat_results) %>%
 ggplot(., aes(x = PC1, y = PC2)) + 
   stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
   geom_point(aes(color = treatment, shape = day), size = 2.5) + 
-  theme_bw() + ggtitle('WAT: Clustered by Treatment') +
+  theme_bw() + ggtitle('vWAT: Clustered by Treatment') +
   #xlim(-260,260) + ylim(-100,100) +
   theme(text = element_text(size=10),
           legend.position="bottom")
@@ -1100,19 +1101,14 @@ Not much for me to say here, we can take a closer look at this and decide how be
 # Up regulated transcripts #
 ############################
 all_combined <- full_join(
-  dplyr::select(
-    joined_bat_results,
-    -b,
-    -wt_qval,
-    -Category),
+  joined_bat_results,
   dplyr::select(
     joined_wat_results,
     -ens_gene,
     -ext_gene,
     -external_transcript_name,
     -b,
-    -wt_qval,
-    -Category
+    -wt_qval
   ),
   by = "target_id",
   suffix = c("_bat", "_wat")
@@ -1171,13 +1167,13 @@ on_diag <- all_combined %>% mutate(comb_hit = lrt_qval_bat < 0.05 &
                          log2(fc_bat)/log2(fc_wat) > 0) %>%
   filter(comb_hit)
 
-gene.df <- clusterProfiler::bitr(on_diag$ext_gene_bat, 
+gene.df <- clusterProfiler::bitr(on_diag$ext_gene, 
                                  fromType = 'SYMBOL', 
                                  toType = 'ENTREZID', 
                                  OrgDb = org.Mm.eg.db)
 
     
-universe <- clusterProfiler::bitr(all_combined$ext_gene_bat, 
+universe <- clusterProfiler::bitr(all_combined$ext_gene, 
                                   fromType = 'SYMBOL', 
                                   toType = 'ENTREZID', 
                                   OrgDb = org.Mm.eg.db)
@@ -1199,7 +1195,7 @@ zScoreDiag <- function(x, subsetFC, universe){
   return((sum(subsetFC$fc_bat < subsetFC$fc_wat, na.rm = T) - sum(subsetFC$fc_bat > subsetFC$fc_wat, na.rm = T)) / sqrt(ncol(subsetFC)))
 }
 
-subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene_bat)
+subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene)
 
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
@@ -1228,13 +1224,13 @@ off_diag <- all_combined %>% mutate(comb_hit = lrt_qval_bat < 0.05 &
                          log2(fc_bat)/log2(fc_wat) < 0) %>%
   filter(comb_hit)
 
-gene.df <- clusterProfiler::bitr(off_diag$ext_gene_bat, 
+gene.df <- clusterProfiler::bitr(off_diag$ext_gene, 
                                  fromType = 'SYMBOL', 
                                  toType = 'ENTREZID', 
                                  OrgDb = org.Mm.eg.db)
 
     
-universe <- clusterProfiler::bitr(all_combined$ext_gene_bat, 
+universe <- clusterProfiler::bitr(all_combined$ext_gene, 
                                   fromType = 'SYMBOL', 
                                   toType = 'ENTREZID', 
                                   OrgDb = org.Mm.eg.db)
@@ -1245,7 +1241,7 @@ goDF <- clusterProfiler::enrichGO(gene = gene.df$ENTREZID,
                                   ont = 'ALL', 
                                   OrgDb = org.Mm.eg.db)
 
-subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene_bat)
+subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene)
 
 goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
@@ -1387,7 +1383,7 @@ download.file(featherURL, destfile=basename(featherURL))
 ```
 
 ### Run RcisTarget
-```{r}
+```{r eval=FALSE, include=FALSE}
 geneLists <- list(wat_up = unique(read_csv('../data/up_regulated_wat.csv')$ext_gene))
 
 # Search space: 1k bp around TSS
@@ -1422,7 +1418,7 @@ motifEnrichmentTable <- addMotifAnnotation(motifs_AUC, nesThreshold=3,
 motifEnrichmentTable[,-"TF_lowConf",]
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 ggplot(filter(joined_wat_results, !is.na(Direction)), 
        aes(x = log2(fc), 
            y = -log10(lrt_qval))) + 
@@ -1494,7 +1490,7 @@ joined_wat_results %>% filter(ext_gene %in% elk4_targets, fc > 2, lrt_qval < 0.0
 
 ## All TFs
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 library(UpSetR)
 library(ComplexHeatmap)
 
@@ -1581,7 +1577,7 @@ ggplot(.,
 
 ## TF Analysis for vWAT + BAT up-regulated genes
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 geneLists <- list(wat_bat_up = all_combined %>% 
                     filter(fc_bat > 1, 
                            fc_wat > 1, 
@@ -1611,6 +1607,14 @@ ggplot(filter(all_combined, lrt_qval_wat < 0.05, lrt_qval_bat < 0.05),
            y = log2(fc_bat))) + 
   geom_point(alpha = 0.25, 
              stroke = 0) +
+  geom_point(alpha = 1, 
+             size = 4, 
+             stroke = 0,
+             color = "orange",
+             data = filter(all_combined,
+                           ext_gene %in% allTFs,
+                           lrt_qval_wat < 0.05,
+                           lrt_qval_bat < 0.05)) +
   geom_vline(xintercept = 0) +
   geom_hline(yintercept = 0) +
   geom_label_repel(data = filter(all_combined,
@@ -1618,9 +1622,9 @@ ggplot(filter(all_combined, lrt_qval_wat < 0.05, lrt_qval_bat < 0.05),
                                 lrt_qval_wat < 0.05,
                                 lrt_qval_bat < 0.05),
                     aes(label = ext_gene), 
-                  size = 2, 
+                  size = 4, 
                   force = 20) +
-  xlim(-7,7) +
+  xlim(-2,2) + ylim(-2,2) +
     theme_bw()
 
 #allTFs <- filter(joined_wat_results, lrt_qval < 0.05, ext_gene %in% allTFs)$ext_gene %>% unique()
@@ -1655,13 +1659,18 @@ UpSet(lt_mat3, comb_order = order(comb_size(lt_mat3)))
 
 elk4 <- extract_comb(lt_mat3, comb_name = "00010")
 
-all_combined %>% filter(ext_gene %in% gabp1_ets1,
-                        fc > 2,
-                        lrt_qval < 0.05) %>%
+all_combined %>% filter(ext_gene %in% elk4,
+                        lrt_qval_bat < 0.05,
+                        lrt_qval_wat < 0.05,
+                        fc_bat > 2,
+                        fc_wat > 2,
+                        !duplicated(ext_gene)) %>%
   ggplot(., 
-         aes(y = -log10(lrt_qval), 
-             x = log2(fc), 
+         aes(y = log2(fc_bat), 
+             x = log2(fc_wat), 
              color = ext_gene == "Cd36")) + 
+  geom_vline(xintercept = 0) +
+  geom_hline(yintercept = 0) + 
   geom_point() +
   theme_bw()
 ```
@@ -1671,6 +1680,164 @@ all_combined %>% filter(ext_gene %in% gabp1_ets1,
 
 * I still need to do the oPOSSUM analysis for the BAT tissue, and would also like to use another program called Pscan that does the same thing to see how well they agree with one another.
 * Let me know what other plots or analysis you think we need and which ones you would like to include for sure and I will finalize those plots and put them into the figures.
+
+
+# Figures
+```{r fig_6, fig.height=11, fig.width=8}
+categories <- read_xlsx("../figures/For Kyle.xlsx") %>%
+  dplyr::rename(ext_gene = Gene)
+
+# Figure 6A
+six_a <- so_pca(so_wat, joined_wat_results) %>%
+  mutate(day = fct_reorder(day, as.numeric(day))) %>%
+
+ggplot(., aes(x = PC1, y = PC2)) + 
+  stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
+  geom_point(aes(color = treatment, shape = day), size = 2.5) + 
+  theme_minimal() +
+  ggtitle('vWAT: Clustered by Treatment') +
+  #xlim(-260,260) + ylim(-100,100) +
+  theme(text = element_text(size=10),
+          legend.position="bottom",
+        legend.box = "vertical")
+
+
+# Figure 6B
+temp <- categories %>% 
+  filter(category == "glycolysis") %>%
+  left_join(joined_wat_results, by = "ext_gene")
+
+six_b <- vol_plot_base(joined_wat_results, 'vWAT') +
+  geom_point(alpha = 1, 
+             size = 2, 
+             stroke = 0, 
+             data = temp,
+             aes(color = category)) +
+  ggtitle("Glycolysis") +
+  theme(legend.position = "none")
+
+# Figure 6C
+six_c <- categories %>% 
+  mutate(target_id = ext_gene) %>%
+  dplyr::filter(category == "glycolysis") %>%
+  left_join(joined_wat_gene_results, by = "target_id") %>%
+  ggplot(., aes(x = target_id, y = log2(fc), fill = category)) +
+  geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  guides(alpha = FALSE) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1),
+        panel.spacing = unit(0, "lines"),
+        text = element_text(size=20),
+        legend.position="none") +
+  #ggtitle('Selected gene abundances - gene level') +
+  xlab('') + ylab('log2 WAT fold change cort\n pellet / placebo pellet')
+
+# Figure 6D
+temp <- categories %>% 
+  filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
+  left_join(joined_wat_results, by = "ext_gene")
+
+six_d <- vol_plot_base(joined_wat_results, 'vWAT') +
+  geom_point(alpha = 1, 
+             size = 2, 
+             stroke = 0, 
+             data = temp,
+             aes(color = category)) +
+  guides(color = guide_legend(nrow=2, byrow=TRUE)) +
+  ggtitle("Lipid Metabolism")
+
+# Figure 6E
+six_e <- categories %>% 
+  mutate(target_id = ext_gene) %>%
+  dplyr::filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
+  left_join(joined_wat_gene_results, by = "target_id") %>%
+  mutate(category = factor(category, levels = c("TG Synthesis","TG Degradation","Fatty acid transport","Other"))) %>%
+  
+  ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = category)) +
+  geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  guides(alpha = FALSE) +
+  facet_wrap(~category, scales = 'free_x', nrow = 1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1),
+        panel.spacing = unit(0, "lines"),
+        #text = element_text(size=10),
+        legend.position="none") +
+  guides(fill = guide_legend(nrow=2, byrow=TRUE)) +
+  #ggtitle('Selected gene abundances - gene level') +
+  xlab('') + ylab('log2 WAT fold change cort\n pellet / placebo pellet')
+
+# Figure 6F
+temp <- categories %>% 
+  filter(category %in% c("Circadian rhythm")) %>%
+  left_join(joined_wat_results, by = "ext_gene")
+
+six_f <- vol_plot_base(joined_wat_results, 'vWAT') +
+  geom_point(alpha = 1, 
+             size = 2, 
+             stroke = 0, 
+             data = temp,
+             aes(color = category)) +
+  theme(legend.position = "none") +
+  ggtitle("Circadian Rhythm")
+
+# Figure 6G
+six_g <- categories %>% 
+  mutate(target_id = ext_gene) %>%
+  dplyr::filter(category %in% c("Circadian rhythm")) %>%
+  left_join(joined_wat_gene_results, by = "target_id") %>%
+  
+  ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = category)) +
+  geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  guides(alpha = FALSE) +
+  facet_wrap(~category, scales = 'free_x', nrow = 1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1),
+        panel.spacing = unit(0, "lines"),
+        #text = element_text(size=10),
+        legend.position="none") +
+  guides(fill = guide_legend(nrow=2, byrow=TRUE)) +
+  #ggtitle('Selected gene abundances - gene level') +
+  xlab('') + ylab('log2 WAT fold change cort\n pellet / placebo pellet')
+
+# Full figure
+top <- six_a + six_b + six_c + plot_layout(widths = c(1,1.5,0.5))
+mid <- six_d + six_e
+bottom <- six_f + six_g
+
+top / mid / bottom + 
+  plot_annotation(tag_levels = "A") & 
+  theme(text = element_text(size=12)) 
+
+```
+
+```{r fig_7, fig.height=11/3, fig.width=8}
+categories <- read_xlsx("../figures/For Kyle.xlsx") %>%
+  dplyr::rename(ext_gene = Gene)
+
+# Figure 7A
+seven_a <- so_pca(so_bat, joined_bat_results) %>%
+  mutate(day = fct_reorder(day, as.numeric(day))) %>%
+
+ggplot(., aes(x = PC1, y = PC2)) + 
+  stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
+  geom_point(aes(color = treatment, shape = day), size = 2.5) + 
+  theme_minimal() +
+  ggtitle('BAT: Clustered by Treatment') +
+  #xlim(-260,260) + ylim(-100,100) +
+  theme(text = element_text(size=10),
+          legend.position="bottom",
+        legend.box = "vertical")
+
+
+# Full figure
+top <- seven_a 
+
+
+top + 
+  plot_annotation(tag_levels = "A") & 
+  theme(text = element_text(size=12)) 
+
+```
 
 
 ```{r sessioninfo, echo = FALSE, eval = TRUE}

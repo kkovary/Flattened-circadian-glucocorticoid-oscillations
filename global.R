@@ -32,6 +32,9 @@ joined_bat_gene_results <- readRDS('data/joined_bat_gene_results.RDS') %>% filte
 bat_go_terms <- readRDS('data/bat_go_terms.RDS')
 bat_universe <- readRDS('data/universe_bat.RDS')
 
+# Combined BAT WAT
+all_combined <- readRDS('data/all_combined.RDS')
+
 # KEGG data
 kegg_genes <- readRDS('data/kegg_genes.RDS')
 kegg_pathway_names <- unique(kegg_genes$Description)
@@ -51,13 +54,30 @@ wat_kegg <- left_join(joined_wat_results, kegg_genes, 'ext_gene') %>%
 # Additional functions #
 ########################
 
+go_to_genes <- function(go_term_list, 
+                        go_term_table = wat_go_terms,
+                        gene_list = wat_universe,
+                        gene_expression_table = joined_wat_results){
+  
+  selected_go_terms <- go_term_table %>% 
+    filter(Description %in% go_term_list) %>%
+    pull(ID)
+  
+  go_term_table %>% filter(Description %in% go_term_list) %>% 
+    mutate(ENTREZID = strsplit(geneID,'/')) %>%
+    dplyr::select(ONTOLOGY, ID, Description, ENTREZID) %>%
+    unnest(cols = ENTREZID) %>% left_join(go_term_table, by = 'ENTREZID') %>%
+    dplyr::rename(ext_gene = SYMBOL) %>% left_join(gene_expression_table, by = 'ext_gene') %>%
+    filter(lrt_qval < 0.05)
+}
+
 
 #####################
 # Volcano Plot Base #
 #####################
 
 vol_plot_base <- function(base_data, depot){
-  ggplot(base_data, 
+  base <- ggplot(base_data, 
          aes(x = log2(fc), 
              y = -log10(lrt_qval))) + 
     geom_point(alpha = 0.25, 
@@ -74,9 +94,10 @@ vol_plot_base <- function(base_data, depot){
     xlab('log2(fold change)') + 
     ylab('-log10(qValue)') +
     ggtitle(paste0(depot,' Cort Pellet vs Placebo Pellet - Gene level')) +
-    theme_bw() + 
+    theme_minimal() + 
     theme(text = element_text(size=20),
           legend.position="bottom")
+
 }
 
 ##########################################
