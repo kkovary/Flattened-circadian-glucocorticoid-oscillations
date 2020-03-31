@@ -572,7 +572,7 @@ for(i in 1:nrow(all_comp)){
   print(paste0('Loop ',i,'/',nrow(all_comp)))
 }
 
-all_lrt <- all_lrt %>% unite(comp,cond_1:cond_2, sep = '_vs_', remove = FALSE) %>%
+all_lrt <- all_lrt %>% unite(comp,cond_1:cond_2, sep = ' vs ', remove = FALSE) %>%
   dplyr::select(depot, comp, cond_1, cond_2, everything())
 saveRDS(all_lrt, file = '~/Documents/GitHub/ShinyApps/Flattened-circadian-glucocorticoid-oscillations/data/all_lrt.RDS')
 ```
@@ -1014,10 +1014,10 @@ zScore <- function(x, subsetFC, universe){
   return((sum(FC > 0, na.rm = T) - sum(FC < 0, na.rm = T)) / sqrt(length(FC)))
 }
 
-goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
+goDF_wat <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScore(geneID, subsetFC, universe))
 
-ggplot(goDF, 
+ggplot(goDF_wat, 
        aes(x = zscore, 
            y = -log10(p.adjust), 
            size = Count)) + 
@@ -1025,7 +1025,7 @@ ggplot(goDF,
   facet_wrap(~ONTOLOGY, 
              scales = 'free', 
              ncol = 1) +
-  geom_text_repel(data = filter(goDF, rank <= 20),
+  geom_text_repel(data = filter(goDF_wat, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
@@ -1071,10 +1071,10 @@ zScore <- function(x, subsetFC, universe){
   return((sum(FC > 0, na.rm = T) - sum(FC < 0, na.rm = T)) / sqrt(length(FC)))
 }
 
-goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
+goDF_bat <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScore(geneID, subsetFC, universe))
 
-ggplot(goDF, 
+ggplot(goDF_bat, 
        aes(x = zscore, 
            y = -log10(p.adjust), 
            size = Count)) + 
@@ -1082,7 +1082,7 @@ ggplot(goDF,
   facet_wrap(~ONTOLOGY, 
              scales = 'free', 
              ncol = 1) +
-  geom_text_repel(data = filter(goDF, rank <= 20),
+  geom_text_repel(data = filter(goDF_bat, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
@@ -1303,7 +1303,7 @@ eight_g <- ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)
   geom_point(size = 4, alpha = 0.5, stroke = 0) + 
   scale_color_brewer(palette = "Dark2",na.value = "grey50",) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
-                    aes(label = TF, color = direction), size = 3, force = 10) +
+                    aes(label = TF, color = direction), size = 2, force = 10) +
   theme_bw() + theme(legend.position = 'bottom') +
   xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment') +
   ggtitle("vWAT")
@@ -1372,7 +1372,7 @@ eight_h <- ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)
   geom_point(size = 4, alpha = 0.5, stroke = 0) +
   scale_color_brewer(palette = "Dark2",na.value = "grey50",) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
-                    aes(label = TF, color = direction), size = 3, force = 20) +
+                    aes(label = TF, color = direction), size = 2, force = 20) +
   theme_bw() + theme(legend.position = 'bottom') +
   xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment') +
   ggtitle("BAT")
@@ -1714,7 +1714,8 @@ ggplot(., aes(x = PC1, y = PC2)) +
 # Figure 6B
 temp <- categories %>% 
   filter(category == "glycolysis") %>%
-  left_join(joined_wat_results, by = "ext_gene")
+  left_join(joined_wat_results, by = "ext_gene") %>%
+  filter(lrt_qval < 0.05)
 
 six_b <- vol_plot_base(joined_wat_results, 'vWAT') +
   geom_point(alpha = 1, 
@@ -1825,7 +1826,7 @@ bottom <- six_f + six_g
 top / mid / bottom + 
   plot_annotation(tag_levels = "A",
                   title = 'Fig. 6') & 
-  theme(text = element_text(size=10)) 
+  theme(text = element_text(size=8)) 
 
 ```
 
@@ -1999,7 +2000,135 @@ top / mid / bottom +
   #plot_layout(heights = c(1,1,2)) +
   plot_annotation(tag_levels = "A",
                   title = 'Fig. 8') & 
-  theme(text = element_text(size=10)) 
+  theme(text = element_text(size=8)) 
+
+```
+
+```{r fig_s2, fig.height=8, fig.width=8}
+# Sup Fig 2 A
+s2_a <- all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
+  summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
+  ungroup() %>%
+  filter(depot == "vWAT") %>%
+  ggplot(., 
+         aes(x = fct_reorder(comp, num_sig), 
+             y = num_sig, 
+             fill = comp == "Cort pellet vs Sham pellet")) + 
+  geom_bar(stat = 'identity') + 
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 15)) +
+  scale_fill_manual(values = c("#bababa", "#007BA7")) +
+  theme_minimal() +
+  theme(text = element_text(size=6),
+        axis.text.x = element_text(angle = 70, hjust = 1),
+        legend.position = "none")  + 
+  xlab('') + ylab('Number of significantly\n changed transcripts')
+
+# Sup Fig 2B
+goterms <- c("acetyl-CoA metabolic process","carbohydrate catabolic process","lipid localization","cellular response to lipid","lipid homeostasis","phospholipid metabolic process","fatty acid metabolic process","fat cell differentiation","fatty acid biosynthetic process","fatty acid transport","fatty acid oxidation","glucose metabolic process","glucose 6-phosphate metabolic process","glycolytic process","pyruvate metabolic process","regulation of cellular component size","mitochondrion organization","mitochondrial transport","circadian rhythm","rhythmic process")
+
+s2_b <- ggplot(filter(goDF_wat, ONTOLOGY == "BP"), 
+       aes(x = zscore, 
+           y = -log10(p.adjust), 
+           size = Count)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  geom_point(alpha= 0.25) + 
+  geom_point(data = filter(goDF_wat, Description %in% goterms), color = "#007BA7") +
+  #scale_color_manual(values = c("#bababa", "#007BA7")) +
+  geom_label_repel(data = filter(goDF_wat, Description %in% goterms),
+                    aes(label = Description), 
+                  colour = 'black', 
+                  size = 1, 
+                  force = 10) +
+  ggtitle('Biological Process GO Terms: \nvWAT Cort Pellet vs Placebo Pellet') +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Sup Fig 2C
+s2_c <- ggplot(filter(goDF_wat, ONTOLOGY == "CC"), 
+       aes(x = zscore, 
+           y = -log10(p.adjust), 
+           size = Count)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  geom_point(alpha= 0.25) + 
+  geom_point(data = filter(goDF_wat, rank <= 20, ONTOLOGY == "CC"), color = "#007BA7") +
+  #scale_color_manual(values = c("#bababa", "#007BA7")) +
+  geom_label_repel(data = filter(goDF_wat, rank <= 20, ONTOLOGY == "CC"),
+                    aes(label = Description), 
+                  colour = 'black', 
+                  size = 1, 
+                  force = 10) +
+  ggtitle('Cellular Compartment GO Terms: \nvWAT Cort Pellet vs Placebo Pellet') +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+(s2_a + plot_spacer() + plot_spacer()) / (s2_b + s2_c) +
+  plot_layout(heights = c(0.5,1)) +
+  plot_annotation(tag_levels = "A",
+                  title = 'Fig. S2') &
+  theme(text = element_text(size=8)) 
+```
+
+```{r fig_s3, fig.height=11, fig.width=8}
+# Sup Fig 3 A
+s3_a <- all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
+  summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
+  ungroup() %>%
+  filter(depot == "BAT") %>%
+  ggplot(., 
+         aes(x = fct_reorder(comp, num_sig), 
+             y = num_sig, 
+             fill = comp == "Cort pellet vs Sham pellet")) + 
+  geom_bar(stat = 'identity') + 
+  scale_fill_manual(values = c("#bababa", "#007BA7")) +
+  theme_minimal() +
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(angle = 70, hjust = 1, size = 10),
+        legend.position = "none")  + 
+  xlab('') + ylab('Number of significantly\n changed transcripts')
+
+# Sup Fig 2B
+goterms <- c("cold-induced thermogenesis","regulation of cold-induced thermogenesis","adaptive thermogenesis","mitochondrial transport","mitochondrial membrane organization","mitochondrial respiratory chain complex assembly","mitochondrial ATP synthesis coupled electron transport","respiratory electron transport chain","circadian rhythm","rhythmic process","regulation of lipid metabolic process","lipid oxidation","lipid storage","lipid localization","fatty acid metabolic process","brown fat cell differentiation","fatty acid beta-oxidation","fatty acid oxidation","cellular response to lipid","temperature homeostasis")
+
+s3_b <- ggplot(filter(goDF_bat, ONTOLOGY == "BP"), 
+       aes(x = zscore, 
+           y = -log10(p.adjust), 
+           size = Count)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  geom_point(alpha= 0.25) + 
+  geom_point(data = filter(goDF_bat, Description %in% goterms), color = "#007BA7") +
+  #scale_color_manual(values = c("#bababa", "#007BA7")) +
+  geom_label_repel(data = filter(goDF_bat, Description %in% goterms),
+                    aes(label = Description), 
+                  colour = 'black', 
+                  size = 1, 
+                  force = 10) +
+  ggtitle('Biological Process GO Terms: \nBAT Cort Pellet vs Placebo Pellet') +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Sup Fig 2C
+s3_c <- ggplot(filter(goDF_bat, ONTOLOGY == "CC"), 
+       aes(x = zscore, 
+           y = -log10(p.adjust), 
+           size = Count)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  geom_point(alpha= 0.25) + 
+  geom_point(data = filter(goDF_bat, rank <= 20, ONTOLOGY == "CC"), color = "#007BA7") +
+  #scale_color_manual(values = c("#bababa", "#007BA7")) +
+  geom_label_repel(data = filter(goDF_bat, rank <= 20, ONTOLOGY == "CC"),
+                    aes(label = Description), 
+                  colour = 'black', 
+                  size = 1, 
+                  force = 10) +
+  ggtitle('Cellular Compartment GO Terms: \nBAT Cort Pellet vs Placebo Pellet') +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+(s3_a + plot_spacer() + plot_spacer()) / (s3_b + s3_c) +
+  plot_layout(heights = c(0.5,1)) +
+  plot_annotation(tag_levels = "A",
+                  title = 'Fig. S3') &
+  theme(text = element_text(size=8)) 
 
 ```
 
