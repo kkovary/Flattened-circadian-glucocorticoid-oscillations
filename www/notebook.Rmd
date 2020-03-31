@@ -1718,7 +1718,7 @@ temp <- categories %>%
   filter(lrt_qval < 0.05)
 
 six_b <- vol_plot_base(joined_wat_results, 'vWAT') +
-  geom_point(alpha = 1, 
+  geom_point(alpha = 0.75, 
              size = 2, 
              stroke = 0, 
              data = temp,
@@ -1747,11 +1747,12 @@ six_c <- categories %>%
 # Figure 6D
 temp <- categories %>% 
   filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
+  mutate(category = factor(category, levels = c("TG Synthesis","TG Degradation","Fatty acid transport","Other"))) %>%
   left_join(joined_wat_results, by = "ext_gene") %>%
   filter(lrt_qval < 0.05)
 
 six_d <- vol_plot_base(joined_wat_results, 'vWAT') +
-  geom_point(alpha = 1, 
+  geom_point(alpha = 0.75, 
              size = 2, 
              stroke = 0, 
              data = temp,
@@ -1789,7 +1790,7 @@ temp <- categories %>%
   filter(lrt_qval < 0.05)
 
 six_f <- vol_plot_base(joined_wat_results, 'vWAT') +
-  geom_point(alpha = 1, 
+  geom_point(alpha = 0.75, 
              size = 2, 
              stroke = 0, 
              data = temp,
@@ -1823,10 +1824,17 @@ top <- six_a + six_b + six_c + plot_layout(widths = c(1,1.5,0.5))
 mid <- six_d + six_e
 bottom <- six_f + six_g
 
-top / mid / bottom + 
+fig_6 <- top / mid / bottom + 
   plot_annotation(tag_levels = "A",
                   title = 'Fig. 6') & 
   theme(text = element_text(size=8)) 
+
+fig_6
+
+ggsave(fig_6,
+       filename = "Fig_6.pdf",
+       path = "../figures/",
+       device = "pdf")
 
 ```
 
@@ -1853,6 +1861,7 @@ ggplot(., aes(x = PC1, y = PC2)) +
 # Figure 7B
 temp <- categories %>% 
   filter(category %in% c("thermogenesis","oxidat. Phosphorylation")) %>%
+  mutate(category = factor(category, levels = c("thermogenesis","oxidat. Phosphorylation"))) %>%
   left_join(joined_bat_results, by = "ext_gene") %>%
   filter(lrt_qval < 0.05)
 
@@ -1899,11 +1908,18 @@ top <- seven_a + seven_b + plot_layout(widths = c(1,2))
 mid <- seven_c
 bottom <- seven_d + seven_e + seven_f + seven_g + plot_layout(nrow = 1)
 
-top / mid / bottom +
+fig_7 <- top / mid / bottom +
   plot_layout(heights = c(1,1,2)) +
   plot_annotation(tag_levels = "A",
                   title = 'Fig. 7') & 
   theme(text = element_text(size=12)) 
+
+fig_7
+
+ggsave(fig_7,
+       filename = "Fig_7.pdf",
+       path = "../figures/",
+       device = "pdf")
 
 ```
 
@@ -1996,15 +2012,22 @@ top <- eight_a + eight_b + eight_c
 mid <- eight_d + eight_e
 bottom <- eight_g + plot_spacer() + eight_h + plot_layout(widths = c(1,0.5,1))
 
-top / mid / bottom +
+fig_8 <- top / mid / bottom +
   #plot_layout(heights = c(1,1,2)) +
   plot_annotation(tag_levels = "A",
                   title = 'Fig. 8') & 
   theme(text = element_text(size=8)) 
 
+fig_8
+
+ggsave(fig_8,
+       filename = "Fig_8.pdf",
+       path = "../figures/",
+       device = "pdf")
+
 ```
 
-```{r fig_s2, fig.height=8, fig.width=8}
+```{r fig_s2, fig.height=11, fig.width=8}
 # Sup Fig 2 A
 s2_a <- all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>% 
   summarise(num_sig = sum(lrt_qval < 0.05, na.rm = T)) %>%
@@ -2061,11 +2084,18 @@ s2_c <- ggplot(filter(goDF_wat, ONTOLOGY == "CC"),
   theme_minimal() +
   theme(legend.position = "bottom")
 
-(s2_a + plot_spacer() + plot_spacer()) / (s2_b + s2_c) +
+s2 <- (s2_a + plot_spacer() + plot_spacer()) / (s2_b + s2_c) +
   plot_layout(heights = c(0.5,1)) +
   plot_annotation(tag_levels = "A",
                   title = 'Fig. S2') &
   theme(text = element_text(size=8)) 
+
+s2
+
+ggsave(s2,
+       filename = "Fig_S2.pdf",
+       path = "../figures/",
+       device = "pdf")
 ```
 
 ```{r fig_s3, fig.height=11, fig.width=8}
@@ -2086,9 +2116,10 @@ s3_a <- all_lrt %>% group_by(depot, comp, cond_1, cond_2) %>%
         legend.position = "none")  + 
   xlab('') + ylab('Number of significantly\n changed transcripts')
 
-# Sup Fig 2B
+# Sup Fig 3B
 goterms <- c("cold-induced thermogenesis","regulation of cold-induced thermogenesis","adaptive thermogenesis","mitochondrial transport","mitochondrial membrane organization","mitochondrial respiratory chain complex assembly","mitochondrial ATP synthesis coupled electron transport","respiratory electron transport chain","circadian rhythm","rhythmic process","regulation of lipid metabolic process","lipid oxidation","lipid storage","lipid localization","fatty acid metabolic process","brown fat cell differentiation","fatty acid beta-oxidation","fatty acid oxidation","cellular response to lipid","temperature homeostasis")
 
+set.seed(41)
 s3_b <- ggplot(filter(goDF_bat, ONTOLOGY == "BP"), 
        aes(x = zscore, 
            y = -log10(p.adjust), 
@@ -2106,7 +2137,8 @@ s3_b <- ggplot(filter(goDF_bat, ONTOLOGY == "BP"),
   theme_minimal() +
   theme(legend.position = "bottom")
 
-# Sup Fig 2C
+# Sup Fig 3C
+set.seed(41)
 s3_c <- ggplot(filter(goDF_bat, ONTOLOGY == "CC"), 
        aes(x = zscore, 
            y = -log10(p.adjust), 
@@ -2124,11 +2156,20 @@ s3_c <- ggplot(filter(goDF_bat, ONTOLOGY == "CC"),
   theme_minimal() +
   theme(legend.position = "bottom")
 
-(s3_a + plot_spacer() + plot_spacer()) / (s3_b + s3_c) +
+# Final Figure
+
+s3 <- (s3_a + plot_spacer() + plot_spacer()) / (s3_b + s3_c) +
   plot_layout(heights = c(0.5,1)) +
   plot_annotation(tag_levels = "A",
                   title = 'Fig. S3') &
-  theme(text = element_text(size=8)) 
+  theme(text = element_text(size=8))
+
+s3
+
+ggsave(s3,
+       filename = "Fig_S3.pdf",
+       path = "../figures/",
+       device = "pdf")
 
 ```
 
