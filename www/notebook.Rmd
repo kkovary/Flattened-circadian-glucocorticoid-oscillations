@@ -2175,6 +2175,32 @@ ggsave(s3,
 
 ```
 
+```{r tables}
+# S2
+write_csv(joined_wat_results, path = "../figures/table_s2_a.csv")
+write_csv(joined_wat_gene_results, path = "../figures/table_s2_b.csv")
+
+# S3
+write_csv(goDF_wat, path = "../figures/table_s3.csv")
+
+# S4
+write_csv(joined_bat_results, path = "../figures/table_s4_a.csv")
+write_csv(joined_bat_gene_results, path = "../figures/table_s4_b.csv")
+
+# S5
+all_lrt %>% filter(depot == "BAT",
+                   comp == "Cort injection vs Sham injection",
+                   lrt_qval < 0.05) %>%
+  write_csv(path = "../figures/table_s5.csv")
+
+# S6
+write_csv(goDF_bat, path = "../figures/table_s6.csv")
+
+# S7
+write_csv(all_combined, path = "../figures/table_s7.csv")
+
+```
+
 ```{r sessioninfo, echo = FALSE, eval = TRUE}
 # set eval = FALSE if you don't want this info (useful for reproducibility) to appear 
 sessionInfo()
