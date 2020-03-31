@@ -1118,7 +1118,7 @@ saveRDS(all_combined, file = "../data/all_combined.RDS")
 
 up = cbind(all_combined$lrt_qval_bat < 0.05 & all_combined$fc_bat > 1,
           all_combined$lrt_qval_wat < 0.05 & all_combined$fc_wat > 1)
-colnames(up) = c('BAT','WAT')
+colnames(up) = c('BAT','vWAT')
 up[is.na(up)] = FALSE
 
 plot(euler(up, shape = "ellipse"), quantities = TRUE, main = 'Up regulated transcripts')
@@ -1197,13 +1197,13 @@ zScoreDiag <- function(x, subsetFC, universe){
 
 subsetFC <- all_combined %>% dplyr::rename(GeneName = ext_gene)
 
-goDF <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
+goDF_on_diag <- goDF %>% as_tibble() %>% group_by(ONTOLOGY) %>% mutate(rank = rank(p.adjust)) %>%
   rowwise() %>% dplyr::mutate(zscore = zScoreDiag(geneID, subsetFC, universe))
 
-ggplot(goDF, aes(x = zscore, y = -log10(p.adjust))) + 
+ggplot(goDF_on_diag, aes(x = zscore, y = -log10(p.adjust))) + 
   geom_point(aes(size = Count), alpha = 0.25) + 
   facet_wrap(~ONTOLOGY, ncol = 1, scales = 'free_y') +
-  geom_text_repel(data = filter(goDF, rank <= 20),
+  geom_text_repel(data = filter(goDF_on_diag, rank <= 20),
                     aes(label = Description), 
                   colour = 'black', 
                   size = 2, 
@@ -1298,14 +1298,17 @@ tf_all <- joined_wat_results %>% dplyr::select(ext_gene, fc, lrt_qval) %>%
   filter(!is.na(direction)) %>%
   right_join(tf_all, 'TF') %>% filter(!duplicated(TF))
 
-ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) + 
+eight_g <- ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) + 
   geom_vline(xintercept = 0, alpha = 0.5) + geom_hline(yintercept = 0, alpha = 0.5) + 
   geom_point(size = 4, alpha = 0.5, stroke = 0) + 
+  scale_color_brewer(palette = "Dark2",na.value = "grey50",) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
                     aes(label = TF, color = direction), size = 3, force = 10) +
   theme_bw() + theme(legend.position = 'bottom') +
-  xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment')
+  xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment') +
+  ggtitle("vWAT")
 
+eight_g
 
 
 ```
@@ -1364,13 +1367,17 @@ tf_all <- joined_bat_results %>% dplyr::select(ext_gene, fc, lrt_qval) %>%
   filter(!is.na(direction)) %>%
   right_join(tf_all, 'TF') %>% filter(!duplicated(TF))
 
-ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) +
+eight_h <- ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)) +
   geom_vline(xintercept = 0, alpha = 0.5) + geom_hline(yintercept = 0, alpha = 0.25) +
   geom_point(size = 4, alpha = 0.5, stroke = 0) +
+  scale_color_brewer(palette = "Dark2",na.value = "grey50",) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
                     aes(label = TF, color = direction), size = 3, force = 20) +
   theme_bw() + theme(legend.position = 'bottom') +
-  xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment')
+  xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment') +
+  ggtitle("BAT")
+
+eight_h
 ```
 
 
@@ -1694,8 +1701,10 @@ six_a <- so_pca(so_wat, joined_wat_results) %>%
 ggplot(., aes(x = PC1, y = PC2)) + 
   stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
   geom_point(aes(color = treatment, shape = day), size = 2.5) + 
+  scale_color_manual(values = c("#0000C0", "#FF0000")) +
+  scale_fill_manual(values = c("#0000C0", "#FF0000")) +
   theme_minimal() +
-  ggtitle('vWAT: Clustered by Treatment') +
+  #ggtitle('vWAT: Clustered by \nTreatment') +
   #xlim(-260,260) + ylim(-100,100) +
   theme(text = element_text(size=10),
           legend.position="bottom",
@@ -1713,6 +1722,7 @@ six_b <- vol_plot_base(joined_wat_results, 'vWAT') +
              stroke = 0, 
              data = temp,
              aes(color = category)) +
+  scale_color_brewer(palette = "Dark2") +
   ggtitle("Glycolysis") +
   theme(legend.position = "none")
 
@@ -1723,6 +1733,7 @@ six_c <- categories %>%
   left_join(joined_wat_gene_results, by = "target_id") %>%
   ggplot(., aes(x = target_id, y = log2(fc), fill = category)) +
   geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  scale_fill_brewer(palette = "Dark2") +
   guides(alpha = FALSE) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 50, hjust = 1),
@@ -1735,7 +1746,8 @@ six_c <- categories %>%
 # Figure 6D
 temp <- categories %>% 
   filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
-  left_join(joined_wat_results, by = "ext_gene")
+  left_join(joined_wat_results, by = "ext_gene") %>%
+  filter(lrt_qval < 0.05)
 
 six_d <- vol_plot_base(joined_wat_results, 'vWAT') +
   geom_point(alpha = 1, 
@@ -1743,6 +1755,7 @@ six_d <- vol_plot_base(joined_wat_results, 'vWAT') +
              stroke = 0, 
              data = temp,
              aes(color = category)) +
+  scale_color_brewer(palette = "Dark2") +
   guides(color = guide_legend(nrow=2, byrow=TRUE)) +
   ggtitle("Lipid Metabolism")
 
@@ -1752,9 +1765,11 @@ six_e <- categories %>%
   dplyr::filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
   left_join(joined_wat_gene_results, by = "target_id") %>%
   mutate(category = factor(category, levels = c("TG Synthesis","TG Degradation","Fatty acid transport","Other"))) %>%
+  filter(lrt_qval < 0.05) %>%
   
   ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = category)) +
   geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  scale_fill_brewer(palette = "Dark2") +
   guides(alpha = FALSE) +
   facet_wrap(~category, scales = 'free_x', nrow = 1) +
   theme_minimal() +
@@ -1769,7 +1784,8 @@ six_e <- categories %>%
 # Figure 6F
 temp <- categories %>% 
   filter(category %in% c("Circadian rhythm")) %>%
-  left_join(joined_wat_results, by = "ext_gene")
+  left_join(joined_wat_results, by = "ext_gene") %>%
+  filter(lrt_qval < 0.05)
 
 six_f <- vol_plot_base(joined_wat_results, 'vWAT') +
   geom_point(alpha = 1, 
@@ -1777,6 +1793,7 @@ six_f <- vol_plot_base(joined_wat_results, 'vWAT') +
              stroke = 0, 
              data = temp,
              aes(color = category)) +
+  scale_color_brewer(palette = "Dark2") +
   theme(legend.position = "none") +
   ggtitle("Circadian Rhythm")
 
@@ -1788,6 +1805,7 @@ six_g <- categories %>%
   
   ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = category)) +
   geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  scale_fill_brewer(palette = "Dark2") +
   guides(alpha = FALSE) +
   facet_wrap(~category, scales = 'free_x', nrow = 1) +
   theme_minimal() +
@@ -1805,12 +1823,13 @@ mid <- six_d + six_e
 bottom <- six_f + six_g
 
 top / mid / bottom + 
-  plot_annotation(tag_levels = "A") & 
-  theme(text = element_text(size=12)) 
+  plot_annotation(tag_levels = "A",
+                  title = 'Fig. 6') & 
+  theme(text = element_text(size=10)) 
 
 ```
 
-```{r fig_7, fig.height=11/3, fig.width=8}
+```{r fig_7, fig.height=11, fig.width=8}
 categories <- read_xlsx("../figures/For Kyle.xlsx") %>%
   dplyr::rename(ext_gene = Gene)
 
@@ -1821,24 +1840,168 @@ seven_a <- so_pca(so_bat, joined_bat_results) %>%
 ggplot(., aes(x = PC1, y = PC2)) + 
   stat_ellipse(geom = 'polygon', aes(fill = treatment), alpha = 0.2) +
   geom_point(aes(color = treatment, shape = day), size = 2.5) + 
+  scale_color_manual(values = c("#0000C0", "#FF0000")) +
+  scale_fill_manual(values = c("#0000C0", "#FF0000")) +
   theme_minimal() +
-  ggtitle('BAT: Clustered by Treatment') +
+  ggtitle('BAT: Clustered by \nTreatment') +
   #xlim(-260,260) + ylim(-100,100) +
   theme(text = element_text(size=10),
           legend.position="bottom",
         legend.box = "vertical")
 
+# Figure 7B
+temp <- categories %>% 
+  filter(category %in% c("thermogenesis","oxidat. Phosphorylation")) %>%
+  left_join(joined_bat_results, by = "ext_gene") %>%
+  filter(lrt_qval < 0.05)
+
+seven_b <- vol_plot_base(joined_bat_results, 'BAT') +
+  geom_point(alpha = 0.75, 
+             size = 2.5, 
+             stroke = 0, 
+             data = temp,
+             aes(color = category)) +
+  scale_color_brewer(palette = "Dark2") +
+  ggtitle("Thermogenesis / Oxidative \n Phosphorylation") +
+  theme(legend.position = "bottom")
+
+# Figure 7C
+seven_c <- categories %>% 
+  mutate(target_id = ext_gene) %>%
+  dplyr::filter(category %in% c("thermogenesis","oxidat. Phosphorylation")) %>%
+  left_join(joined_bat_gene_results, by = "target_id") %>%
+  mutate(category = factor(category, levels = c("thermogenesis","oxidat. Phosphorylation"))) %>%
+  filter(lrt_qval < 0.05) %>%
+  
+  ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = category)) +
+  geom_bar(stat = 'identity', aes(alpha = I(((lrt_qval < 0.05) / 1.25) + 0.2))) +
+  scale_fill_brewer(palette = "Dark2") +
+  guides(alpha = FALSE) +
+  facet_wrap(~category, scales = 'free_x', nrow = 1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1),
+        panel.spacing = unit(0, "lines"),
+        #text = element_text(size=10),
+        legend.position="none") +
+  guides(fill = guide_legend(nrow=2, byrow=TRUE)) +
+  #ggtitle('Selected gene abundances - gene level') +
+  xlab('') + ylab('log2 BAT fold change cort\n pellet / placebo pellet')
+
+# Figures 7d-7G
+seven_d <- cowplot::ggdraw() + cowplot::draw_image(magick::image_read_pdf("../figures/7E.pdf"))
+seven_e <- cowplot::ggdraw() + cowplot::draw_image(magick::image_read_pdf("../figures/7f_a.pdf"))
+seven_f <- cowplot::ggdraw() + cowplot::draw_image(magick::image_read_pdf("../figures/7F_b.pdf"))
+seven_g <- cowplot::ggdraw() + cowplot::draw_image(magick::image_read_pdf("../figures/7G.pdf"))
 
 # Full figure
-top <- seven_a 
+top <- seven_a + seven_b + plot_layout(widths = c(1,2))
+mid <- seven_c
+bottom <- seven_d + seven_e + seven_f + seven_g + plot_layout(nrow = 1)
 
-
-top + 
-  plot_annotation(tag_levels = "A") & 
+top / mid / bottom +
+  plot_layout(heights = c(1,1,2)) +
+  plot_annotation(tag_levels = "A",
+                  title = 'Fig. 7') & 
   theme(text = element_text(size=12)) 
 
 ```
 
+```{r fig_8, fig.height=11, fig.width=8}
+
+# Figure 8A
+up = cbind(all_combined$lrt_qval_bat < 0.05 & all_combined$fc_bat > 1,
+          all_combined$lrt_qval_wat < 0.05 & all_combined$fc_wat > 1)
+colnames(up) = c('BAT','vWAT')
+up[is.na(up)] = FALSE
+
+eight_a <- ggplotify::as.ggplot(plot(euler(up, shape = "ellipse"), 
+                                    quantities = TRUE, 
+                                    main = 'Up regulated',
+                                    cex.main = 0.1))
+
+# Figure 8B
+down = cbind(all_combined$lrt_qval_bat < 0.05 & all_combined$fc_bat < 1,
+          all_combined$lrt_qval_wat < 0.05 & all_combined$fc_wat < 1)
+colnames(down) = c('BAT','vWAT')
+down[is.na(down)] = FALSE
+
+eight_b <- ggplotify::as.ggplot(plot(euler(down, shape = "ellipse"), 
+                                    quantities = TRUE, 
+                                    main = 'Down regulated'))
+
+# Figure 8C
+eight_c <- all_combined %>% mutate(comb_hit = lrt_qval_bat < 0.05 & lrt_qval_wat < 0.05) %>%
+  filter(comb_hit) %>%
+  ggplot(.,
+       aes(x= log2(fc_bat),
+           y = log2(fc_wat))) +
+  geom_point(alpha= 0.5, stroke = 0) + 
+  geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
+  theme_minimal() + xlab('BAT log2 Fold Change') + ylab('vWAT log2 Fold Change')
+
+# Figure 8D
+temp <- goDF_on_diag %>% 
+  group_by(ONTOLOGY) %>%
+  mutate(rank = rank(zscore, ties.method = "first")) %>%
+  ungroup() %>% filter(ONTOLOGY == "BP")
+
+set.seed(41)
+eight_d <- ggplot(temp, aes(x = rank, y = zscore)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  geom_point() +
+  geom_point(data = filter(temp, grepl("lipid|circadian",temp$Description)), color = "red") +
+  geom_label_repel(data = filter(temp, grepl("lipid|circadian",temp$Description)),
+                    aes(label = Description), 
+                  colour = 'black', 
+                  size = 1.5, 
+                  force = 100) +
+  theme_minimal() +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.position = "bottom")
+
+
+# Figure 8E
+eight_e <- categories %>% 
+  dplyr::rename(target_id = ext_gene) %>%
+  dplyr::filter(category %in% c("lipid metabolism", "Circadian rhythm")) %>%
+  left_join(joined_wat_gene_results, by = "target_id") %>%
+  left_join(joined_bat_gene_results, by = "target_id") %>%
+  dplyr::filter(Direction.x == Direction.y) %>%
+  dplyr::select(category, target_id, fc.x, fc.y) %>%
+  dplyr::rename(BAT = fc.y, vWAT = fc.x) %>%
+  pivot_longer(BAT:vWAT, names_to = "Depot", values_to = "fc") %>%
+  
+  
+  ggplot(., aes(x = fct_reorder(target_id, fc), y = log2(fc), fill = Depot)) +
+  geom_bar(stat = 'identity', position = "dodge") +
+  scale_fill_manual(values = c("#0000C0", "#FF0000")) +
+  guides(alpha = FALSE) +
+  facet_wrap(~category, scales = 'free_x', nrow = 1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1),
+        #panel.spacing = unit(0, "lines"),
+        #text = element_text(size=10),
+        legend.position="bottom") +
+  scale_y_continuous(breaks = seq(-10, 10, by = 2)) +
+  #guides(fill = guide_legend(nrow=2, byrow=TRUE)) +
+  #ggtitle('Selected gene abundances - gene level') +
+  xlab('') + ylab('log2 vWAT and BAT fold change cort\n pellet / placebo pellet')
+
+
+# Full figure
+top <- eight_a + eight_b + eight_c
+mid <- eight_d + eight_e
+bottom <- eight_g + plot_spacer() + eight_h + plot_layout(widths = c(1,0.5,1))
+
+top / mid / bottom +
+  #plot_layout(heights = c(1,1,2)) +
+  plot_annotation(tag_levels = "A",
+                  title = 'Fig. 8') & 
+  theme(text = element_text(size=10)) 
+
+```
 
 ```{r sessioninfo, echo = FALSE, eval = TRUE}
 # set eval = FALSE if you don't want this info (useful for reproducibility) to appear 
