@@ -1304,7 +1304,7 @@ eight_g <- ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)
   scale_color_brewer(palette = "Dark2",na.value = "grey50",) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
                     aes(label = TF, color = direction), size = 2, force = 10) +
-  theme_bw() + theme(legend.position = 'bottom') +
+  theme_minimal() + theme(legend.position = 'bottom') +
   xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment') +
   ggtitle("vWAT")
 
@@ -1373,7 +1373,7 @@ eight_h <- ggplot(tf_all, aes(x = zscore_up, y = zscore_down, color = direction)
   scale_color_brewer(palette = "Dark2",na.value = "grey50",) +
   geom_text_repel(data = filter(tf_all, !is.na(direction)),
                     aes(label = TF, color = direction), size = 2, force = 20) +
-  theme_bw() + theme(legend.position = 'bottom') +
+  theme_minimal() + theme(legend.position = 'bottom') +
   xlab('Up regulated gene motif enrichment') + ylab('Down regulated gene motif enrichment') +
   ggtitle("BAT")
 
@@ -1746,7 +1746,8 @@ six_c <- categories %>%
 
 # Figure 6D
 temp <- categories %>% 
-  filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
+  filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other"),
+         figure == "6D/E") %>%
   mutate(category = factor(category, levels = c("TG Synthesis","TG Degradation","Fatty acid transport","Other"))) %>%
   left_join(joined_wat_results, by = "ext_gene") %>%
   filter(lrt_qval < 0.05)
@@ -1764,7 +1765,8 @@ six_d <- vol_plot_base(joined_wat_results, 'vWAT') +
 # Figure 6E
 six_e <- categories %>% 
   mutate(target_id = ext_gene) %>%
-  dplyr::filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other")) %>%
+  dplyr::filter(category %in% c("TG Synthesis","TG Degradation","Fatty acid transport","Other"),
+                figure == "6D/E") %>%
   left_join(joined_wat_gene_results, by = "target_id") %>%
   mutate(category = factor(category, levels = c("TG Synthesis","TG Degradation","Fatty acid transport","Other"))) %>%
   filter(lrt_qval < 0.05) %>%
@@ -1982,7 +1984,7 @@ eight_d <- ggplot(temp, aes(x = rank, y = zscore)) +
 # Figure 8E
 eight_e <- categories %>% 
   dplyr::rename(target_id = ext_gene) %>%
-  dplyr::filter(category %in% c("lipid metabolism", "Circadian rhythm")) %>%
+  dplyr::filter(figure %in% c("8E","8F")) %>%
   left_join(joined_wat_gene_results, by = "target_id") %>%
   left_join(joined_bat_gene_results, by = "target_id") %>%
   dplyr::filter(Direction.x == Direction.y) %>%
@@ -2009,14 +2011,14 @@ eight_e <- categories %>%
 
 # Full figure
 top <- eight_a + eight_b + eight_c
-mid <- eight_d + eight_e
+mid <- eight_d + eight_e + plot_layout(widths = c(1,2))
 bottom <- eight_g + plot_spacer() + eight_h + plot_layout(widths = c(1,0.5,1))
 
 fig_8 <- top / mid / bottom +
   #plot_layout(heights = c(1,1,2)) +
   plot_annotation(tag_levels = "A",
                   title = 'Fig. 8') & 
-  theme(text = element_text(size=8)) 
+  theme(text = element_text(size=6)) 
 
 fig_8
 
